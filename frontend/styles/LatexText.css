@@ -1,0 +1,28 @@
+/* LaTeX Text Component Styles */
+
+.latex-container {
+  width: 100%;
+}
+
+.math-display {
+  display: block;
+  text-align: center;
+  margin: 1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.math-inline {
+  display: inline;
+}
+
+/* Ensure KaTeX renders properly */
+.latex-container .katex {
+  font-size: 1.2em;
+}
+
+.latex-container .katex-display {
+  margin: 1em 0;
+  text-align: center;
+}
+

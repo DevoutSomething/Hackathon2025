@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "dotenv": "^17.2.3",
+    "katex": "^0.16.25",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-katex": "^3.0.1",
     "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
