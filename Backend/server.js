@@ -113,6 +113,75 @@ When responding:
     req.end();
   });
 }
+async function callClaudeAPIWithSystem(userPrompt, systemPrompt) {
+  console.log("Calling Claude API with custom system prompt");
+
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: userPrompt,
+        },
+      ],
+    });
+
+    const options = {
+      hostname: "api.anthropic.com",
+      port: 443,
+      path: "/v1/messages",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Length": Buffer.byteLength(postData),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      res.on("end", () => {
+        try {
+          const parsedData = JSON.parse(data);
+          console.log("Claude API Response received");
+
+          if (res.statusCode !== 200) {
+            reject(
+              new Error(
+                `Claude API error: ${res.statusCode} - ${
+                  parsedData.error?.message || "Unknown error"
+                }`
+              )
+            );
+          } else {
+            resolve(parsedData.content[0].text);
+          }
+        } catch (error) {
+          reject(
+            new Error(`Failed to parse Claude API response: ${error.message}`)
+          );
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      console.error("Error calling Claude API:", error);                                                
+      reject(error);
+    });
+
+    req.write(postData);
+    req.end();
+  });
+}
 
 app.get("/", (req, res) => {
   res.send("API is up");
@@ -158,22 +227,125 @@ app.post("/userQuestionText", async (req, res) => {
   }
 });
 
-app.post("/userQuestionQuiz", (req, res) => {
-  const prompt = req.body.prompt;
+// ...existing code...
+app.post("/userQuestionQuiz", async (req, res) => {
+  console.log("=== /userQuestionQuiz endpoint called ===");
+  console.log("Request body:", req.body);
 
-  res.send({
-    promptReceived: prompt,
-    text: "not implimented yet",
-  });
-});
+  try {
+    const topic = req.body.topic;
 
-app.post("/userQuestionVideo", (req, res) => {
-  const prompt = req.body.prompt;
+    if (!topic) {
+      console.log("Error: No topic provided");
+      return res.status(400).json({ error: "Topic is required" });
+    }
 
-  res.send({
-    promptReceived: prompt,
-    videoUrl: "not implimented yet",
-  });
+    if (!CLAUDE_API_KEY) {
+      console.log("Error: CLAUDE_API_KEY not configured");
+      return res.status(500).json({ error: "CLAUDE_API_KEY not configured" });
+    }
+
+    const quizSystemPrompt = `You are a quiz generator. Generate exactly 5 multiple choice questions on the given topic.
+Return ONLY valid JSON (no markdown, no code blocks, no extra text) in this exact format:
+[
+  {
+    "question": "Question text here?",
+    "options": ["A) First option", "B) Second option", "C) Third option", "D) Fourth option"],
+    "correctAnswer": "A) First option",
+    "explanation": "Brief explanation of why this is correct"
+  }
+]
+
+Important rules:
+- Generate exactly 5 questions
+- Each question must have exactly 4 options labeled A), B), C), D)
+- correctAnswer must exactly match one of the options (including the letter prefix)
+- Keep questions clear and educational
+- Provide helpful explanations`;
+
+    const quizPrompt = `Generate a quiz on the topic: "${topic}"`;
+
+    console.log("API Key found, calling Claude API for quiz...");
+    const claudeResponse = await callClaudeAPIWithSystem(
+      quizPrompt,
+      quizSystemPrompt
+    );
+
+    // Try to parse the JSON response
+    let quiz;
+    try {
+      // Clean up the response - remove markdown code blocks if present
+      let cleanResponse = claudeResponse.trim();
+
+      // Remove markdown code fences
+      cleanResponse = cleanResponse
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "");
+
+      // Extract JSON array - look for the outermost array
+      const jsonMatch = cleanResponse.match(/\[\s*\{[\s\S]*\}\s*\]/);
+
+      if (jsonMatch) {
+        quiz = JSON.parse(jsonMatch[0]);
+      } else {
+        // Try parsing the whole response
+        quiz = JSON.parse(cleanResponse);
+      }
+
+      // Validate the quiz structure
+      if (!Array.isArray(quiz)) {
+        throw new Error("Response is not an array");
+      }
+
+      if (quiz.length !== 5) {
+        console.warn(`Expected 5 questions, got ${quiz.length}`);
+      }
+
+      // Validate each question
+      quiz.forEach((q, index) => {
+        if (
+          !q.question ||
+          !Array.isArray(q.options) ||
+          !q.correctAnswer ||
+          !q.explanation
+        ) {
+          throw new Error(`Question ${index + 1} is missing required fields`);
+        }
+        if (q.options.length !== 4) {
+          throw new Error(`Question ${index + 1} must have exactly 4 options`);
+        }
+        if (!q.options.includes(q.correctAnswer)) {
+          throw new Error(
+            `Question ${index + 1}: correctAnswer must match one of the options`
+          );
+        }
+      });
+
+      console.log(
+        `Successfully parsed and validated quiz with ${quiz.length} questions`
+      );
+    } catch (parseError) {
+      console.error("Failed to parse quiz JSON:", parseError);
+      console.error("Raw response:", claudeResponse);
+      return res.status(500).json({
+        error: "Failed to parse quiz from Claude",
+        details: parseError.message,
+        raw: claudeResponse.substring(0, 500), // Send first 500 chars for debugging
+      });
+    }
+
+    res.json({
+      topic: topic,
+      quiz: quiz,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error in /userQuestionQuiz:", error);
+    res.status(500).json({
+      error: "Failed to generate quiz",
+      message: error.message,
+    });
+  }
 });
 
 app.post("/updateUserSettings", (req, res) => {
