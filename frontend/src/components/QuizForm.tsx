@@ -1,5 +1,5 @@
-import React, { useState } from "react";
- 
+import React, { useEffect, useState } from "react";
+
 import "../../styles/QuizForm.css";
 
 export interface QuizQuestion {
@@ -21,17 +21,61 @@ export interface QuizFormProps {
 const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, loading, onGenerate }) => {
   const [prompt] = useState<string>(initialPrompt);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [hasAnsweredCorrectly, setHasAnsweredCorrectly] = useState<boolean>(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [wrongAttempts, setWrongAttempts] = useState<Set<string>>(new Set());
+  const [showResults, setShowResults] = useState<boolean>(false);
 
-  const handleAnswerSelect = (questionIndex: number, answer: string) => {
-    setUserAnswers((prev) => ({ ...prev, [questionIndex]: answer }));
+  // Reset flow when a new quiz arrives
+  useEffect(() => {
+    setCurrentIndex(0);
+    setHasAnsweredCorrectly(false);
+    setSelectedAnswer(null);
+    setWrongAttempts(new Set());
+    setShowResults(false);
+    setUserAnswers({});
+  }, [quiz]);
+
+  // Select answer with immediate feedback - must get correct to proceed
+  const handleAnswerSelect = (answer: string) => {
+    if (hasAnsweredCorrectly || !quiz[currentIndex]) return;
+    const correct = quiz[currentIndex].correctAnswer === answer;
+    setSelectedAnswer(answer);
+    
+    if (correct) {
+      setHasAnsweredCorrectly(true);
+      setUserAnswers((prev) => ({ ...prev, [currentIndex]: answer }));
+      setWrongAttempts(new Set());
+    } else {
+      // Mark this answer as wrong, user must try again
+      setWrongAttempts((prev) => new Set(prev).add(answer));
+    }
   };
 
-  const handleQuizSubmit = () => {
-    setSubmitted(true);
+  const handleNext = () => {
+    if (!hasAnsweredCorrectly) return; // Can't advance without correct answer
+    if (currentIndex + 1 < quiz.length) {
+      setCurrentIndex((idx) => idx + 1);
+      setHasAnsweredCorrectly(false);
+      setSelectedAnswer(null);
+      setWrongAttempts(new Set());
+    } else {
+      setShowResults(true);
+    }
   };
 
+  const handleBack = () => {
+    if (currentIndex > 0) {
+      const prevIndex = currentIndex - 1;
+      setCurrentIndex(prevIndex);
+      setHasAnsweredCorrectly(true);
+      setSelectedAnswer(userAnswers[prevIndex] || null);
+      setWrongAttempts(new Set());
+    }
+  };
+
+  // Score
   const score = quiz.reduce((acc, q, i) => {
     if (userAnswers[i] === q.correctAnswer) acc++;
     return acc;
@@ -46,38 +90,75 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
         <p className="loading-text">No prompt provided to generate a quiz.</p>
       )}
 
-      {/* Quiz display */}
-      {!submitted && quiz.length > 0 && (
+      {/* One-question-at-a-time with immediate feedback */}
+      {!showResults && quiz.length > 0 && (
         <div className="quiz-section">
-          {quiz.map((q, index) => (
-            <div key={index} className="quiz-question">
-              <h3>
-                {index + 1}. {q.question}
-              </h3>
-              <div className="quiz-options">
-                {q.options.map((opt, i) => (
-                  <label key={i} className="quiz-option">
+          <div className="quiz-progress">
+            <div className="progress-track">
+              <div
+                className="progress-fill"
+                style={{ width: `${((currentIndex + 1) / quiz.length) * 100}%` }}
+              />
+            </div>
+            <span className="progress-text">Question {currentIndex + 1} of {quiz.length}</span>
+          </div>
+
+          <div className="quiz-question">
+            <h3>
+              {quiz[currentIndex].question}
+            </h3>
+            <div className="quiz-options">
+              {quiz[currentIndex].options.map((opt, i) => {
+                const isCorrect = hasAnsweredCorrectly && opt === selectedAnswer;
+                const isWrong = wrongAttempts.has(opt);
+                return (
+                  <label
+                    key={i}
+                    className={`quiz-option${isCorrect ? " option-correct" : ""}${isWrong ? " option-incorrect" : ""}${hasAnsweredCorrectly ? " option-disabled" : ""}`}
+                  >
                     <input
                       type="radio"
-                      name={`q${index}`}
+                      name={`q${currentIndex}`}
                       value={opt}
-                      checked={userAnswers[index] === opt}
-                      onChange={() => handleAnswerSelect(index, opt)}
+                      checked={selectedAnswer === opt}
+                      onChange={() => handleAnswerSelect(opt)}
+                      disabled={hasAnsweredCorrectly}
                     />
                     {opt}
                   </label>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          ))}
-          <button onClick={handleQuizSubmit} className="submit-button">
-            Submit Answers
-          </button>
+
+            {hasAnsweredCorrectly && (
+              <div className="feedback correct">
+                <span>✓ Correct!</span>
+              </div>
+            )}
+            {wrongAttempts.size > 0 && !hasAnsweredCorrectly && (
+              <div className="feedback incorrect">
+                <span>✗ Try again!</span>
+              </div>
+            )}
+
+            <div className="quiz-navigation">
+              {currentIndex > 0 && (
+                <button onClick={handleBack} className="back-button">
+                  ← Back
+                </button>
+              )}
+              {hasAnsweredCorrectly && (
+                <button onClick={handleNext} className="next-button">
+                  {currentIndex + 1 < quiz.length ? "Next Question →" : "View Results"}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {/* Results display */}
-      {submitted && (
+      {showResults && (
         <div className="results-section">
           <h3>
             You scored {score} / {quiz.length}
@@ -103,12 +184,16 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
           <button
             onClick={() => {
               setUserAnswers({});
-              setSubmitted(false);
+              setCurrentIndex(0);
+              setHasAnsweredCorrectly(false);
+              setSelectedAnswer(null);
+              setWrongAttempts(new Set());
+              setShowResults(false);
               onGenerate();
             }}
             className="reset-button"
           >
-            Regenerate Quiz
+            Create new quiz
           </button>
         </div>
       )}

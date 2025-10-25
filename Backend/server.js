@@ -261,7 +261,8 @@ Important rules:
 - Each question must have exactly 4 options labeled A), B), C), D)
 - correctAnswer must exactly match one of the options (including the letter prefix)
 - Keep questions clear and educational
-- Provide helpful explanations`;
+- Provide helpful explanations
+- For each question have a very easy question, 2 easy questions 1 medium question and 1 hard question`;
 
     const quizPrompt = `Generate a quiz on the topic: "${topic}"`;
 
