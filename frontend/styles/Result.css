@@ -1,0 +1,19 @@
+/* Result Page - Full Height with Gradient Background */
+
+.result-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 50%, #e8f4f8 100%);
+  padding: 2rem;
+}
+
+@media (max-width: 768px) {
+  .result-page {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .result-page {
+    padding: 1rem;
+  }
+}

@@ -24,17 +24,14 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
   const [submitted, setSubmitted] = useState<boolean>(false);
   
 
-  // ✅ Handle selecting an answer
   const handleAnswerSelect = (questionIndex: number, answer: string) => {
     setUserAnswers((prev) => ({ ...prev, [questionIndex]: answer }));
   };
 
-  // ✅ Handle quiz submission
   const handleQuizSubmit = () => {
     setSubmitted(true);
   };
 
-  // ✅ Calculate score
   const score = quiz.reduce((acc, q, i) => {
     if (userAnswers[i] === q.correctAnswer) acc++;
     return acc;
