@@ -174,7 +174,7 @@ async function callClaudeAPIWithSystem(userPrompt, systemPrompt) {
     });
 
     req.on("error", (error) => {
-      console.error("Error calling Claude API:", error);
+      console.error("Error calling Claude API:", error);                                                
       reject(error);
     });
 
