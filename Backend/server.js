@@ -43,6 +43,9 @@ async function callClaudeAPI(userPrompt) {
   console.log("Calling Claude API with prompt:", userPrompt);
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -59,8 +62,11 @@ async function callClaudeAPI(userPrompt) {
             content: userPrompt
           }
         ]
-      })
+      }),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
@@ -71,13 +77,22 @@ async function callClaudeAPI(userPrompt) {
     return data.content[0]?.text || "";
   } catch (error) {
     console.error("Error calling Claude API:", error);
-    throw new Error(`Claude API error: ${error.message}`);
+    if (error.name === 'AbortError') {
+      throw new Error('Claude API request timed out after 30 seconds');
+    } else if (error.code === 'UND_ERR_CONNECT_TIMEOUT') {
+      throw new Error('Claude API connection timeout - please check your internet connection');
+    } else {
+      throw new Error(`Claude API error: ${error.message}`);
+    }
   }
 }
 async function callClaudeAPIWithSystem(userPrompt, systemPrompt) {
   console.log("Calling Claude API with custom system prompt");
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -95,8 +110,11 @@ async function callClaudeAPIWithSystem(userPrompt, systemPrompt) {
             content: userPrompt
           }
         ]
-      })
+      }),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
@@ -107,7 +125,13 @@ async function callClaudeAPIWithSystem(userPrompt, systemPrompt) {
     return data.content[0]?.text || "";
   } catch (error) {
     console.error("Error calling Claude API:", error);
-    throw new Error(`Claude API error: ${error.message}`);
+    if (error.name === 'AbortError') {
+      throw new Error('Claude API request timed out after 30 seconds');
+    } else if (error.code === 'UND_ERR_CONNECT_TIMEOUT') {
+      throw new Error('Claude API connection timeout - please check your internet connection');
+    } else {
+      throw new Error(`Claude API error: ${error.message}`);
+    }
   }
 }
 
@@ -526,9 +550,8 @@ ${scriptContent}`;
     fs.writeFileSync(tempFilePath, wrappedScript);
     console.log(`Created temporary script file: ${tempFilePath}`);
     
-    // Execute the Manim script with correct syntax and specify output directory
-    const outputDir = path.join(__dirname, 'media', 'videos');
-    const manimCommand = `manim -pql --media_dir "${outputDir}" ${tempFilePath} create_video`;
+    // Execute the Manim script - videos will be generated in the same directory as the script
+    const manimCommand = `manim -pql ${tempFilePath} create_video`;
     console.log(`Executing command: ${manimCommand}`);
     console.log(`Script content preview:`, wrappedScript.substring(0, 300));
     
@@ -558,9 +581,9 @@ ${scriptContent}`;
         });
       }
       
-      // Look for the generated video file in the media directory
+      // Look for the generated video file in the scripts directory (same as the Python file)
       const scriptName = tempFileName.replace('.py', '');
-      const mediaDir = path.join(__dirname, 'media', 'videos', scriptName);
+      const mediaDir = path.join(scriptsDir, 'media', 'videos', scriptName);
       
       console.log(`Looking for video in: ${mediaDir}`);
       
