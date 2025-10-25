@@ -551,7 +551,7 @@ ${scriptContent}`;
     console.log(`Created temporary script file: ${tempFilePath}`);
     
     // Execute the Manim script - videos will be generated in the same directory as the script
-    const manimCommand = `manim -pql ${tempFilePath} create_video`;
+    const manimCommand = `manim -ql ${tempFilePath} create_video`;
     console.log(`Executing command: ${manimCommand}`);
     console.log(`Script content preview:`, wrappedScript.substring(0, 300));
     
