@@ -1,5 +1,4 @@
 import React from "react";
-import katex from "katex";
 import "katex/dist/katex.min.css";
 import "../../styles/LatexText.css";
 
@@ -8,64 +7,123 @@ interface LatexTextProps {
 }
 
 export default function LatexText({ text }: LatexTextProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-
-  const processLatex = (content: string): string => {
-    let processed = content;
-
-    // Handle display math ($$...$$) - must be done first
-    processed = processed.replace(/\$\$([^$]+?)\$\$/g, (match, latex) => {
-      try {
-        const rendered = katex.renderToString(latex.trim(), {
-          displayMode: true,
-          throwOnError: false,
-        });
-        console.log("Rendered display math:", latex.trim());
-        return `<div class="math-display">${rendered}</div>`;
-      } catch (error) {
-        console.error("LaTeX rendering error (display):", error);
-        return `<span style="color: red;">Error rendering: ${latex}</span>`;
-      }
-    });
-
-    // Handle inline math ($...$)
-    processed = processed.replace(/\$([^$\n]+?)\$/g, (match, latex) => {
-      try {
-        const rendered = katex.renderToString(latex.trim(), {
-          displayMode: false,
-          throwOnError: false,
-        });
-        console.log("Rendered inline math:", latex.trim());
-        return `<span class="math-inline">${rendered}</span>`;
-      } catch (error) {
-        console.error("LaTeX rendering error (inline):", error);
-        return `<span style="color: red;">Error: ${latex}</span>`;
-      }
-    });
-
-    // Convert newlines to <br> tags
-    processed = processed.replace(/\n/g, "<br>");
-
-    return processed;
-  };
+  const [processedContent, setProcessedContent] = React.useState<JSX.Element[]>([]);
 
   React.useEffect(() => {
-    if (!containerRef.current || !text) return;
+    const renderLatex = async () => {
+      // Dynamically import KaTeX to ensure it loads properly
+      const katex = await import("katex");
+      
+      const parts: JSX.Element[] = [];
+      let lastIndex = 0;
+      let key = 0;
 
-    console.log("Processing text:", text);
+      // Find all display math ($$...$$)
+      const displayMathRegex = /\$\$([^$]+?)\$\$/g;
+      const inlineMathRegex = /\$([^$\n]+?)\$/g;
 
-    // Clear previous content
-    containerRef.current.innerHTML = "";
+      let tempText = text;
+      
+      // First, handle display math
+      let displayMatch;
+      const displayMatches: Array<{start: number, end: number, latex: string}> = [];
+      
+      while ((displayMatch = displayMathRegex.exec(text)) !== null) {
+        displayMatches.push({
+          start: displayMatch.index,
+          end: displayMatch.index + displayMatch[0].length,
+          latex: displayMatch[1]
+        });
+      }
 
-    // Process the text to find and render LaTeX
-    const processedContent = processLatex(text);
-    console.log("Processed content:", processedContent);
-    containerRef.current.innerHTML = processedContent;
+      // Then handle inline math
+      let inlineMatch;
+      const inlineMatches: Array<{start: number, end: number, latex: string}> = [];
+      
+      while ((inlineMatch = inlineMathRegex.exec(text)) !== null) {
+        // Make sure this isn't part of a display math
+        const isInDisplayMath = displayMatches.some(
+          dm => inlineMatch!.index >= dm.start && inlineMatch!.index < dm.end
+        );
+        if (!isInDisplayMath) {
+          inlineMatches.push({
+            start: inlineMatch.index,
+            end: inlineMatch.index + inlineMatch[0].length,
+            latex: inlineMatch[1]
+          });
+        }
+      }
+
+      // Combine and sort all matches
+      const allMatches = [
+        ...displayMatches.map(m => ({...m, type: 'display' as const})),
+        ...inlineMatches.map(m => ({...m, type: 'inline' as const}))
+      ].sort((a, b) => a.start - b.start);
+
+      // Build the content
+      lastIndex = 0;
+      for (const match of allMatches) {
+        // Add text before the math
+        if (match.start > lastIndex) {
+          const textBefore = text.substring(lastIndex, match.start);
+          if (textBefore) {
+            parts.push(<span key={key++}>{textBefore}</span>);
+          }
+        }
+
+        // Render the math
+        try {
+          const html = katex.default.renderToString(match.latex.trim(), {
+            displayMode: match.type === 'display',
+            throwOnError: false,
+            trust: true,
+          });
+
+          if (match.type === 'display') {
+            parts.push(
+              <div 
+                key={key++} 
+                className="math-display"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            );
+          } else {
+            parts.push(
+              <span 
+                key={key++} 
+                className="math-inline"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            );
+          }
+        } catch (error) {
+          console.error("LaTeX rendering error:", error);
+          parts.push(
+            <span key={key++} style={{ color: 'red' }}>
+              Error: {match.latex}
+            </span>
+          );
+        }
+
+        lastIndex = match.end;
+      }
+
+      // Add remaining text
+      if (lastIndex < text.length) {
+        const remainingText = text.substring(lastIndex);
+        if (remainingText) {
+          parts.push(<span key={key++}>{remainingText}</span>);
+        }
+      }
+
+      setProcessedContent(parts);
+    };
+
+    renderLatex();
   }, [text]);
 
   return (
     <div
-      ref={containerRef}
       style={{
         lineHeight: "1.8",
         fontSize: "16px",
@@ -73,6 +131,8 @@ export default function LatexText({ text }: LatexTextProps) {
         minHeight: "20px",
       }}
       className="latex-container"
-    />
+    >
+      {processedContent}
+    </div>
   );
 }

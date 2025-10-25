@@ -11,7 +11,6 @@ export default function TextResult() {
   const location = useLocation();
   const apiResponse = location.state?.apiResponse as ApiResponse | string;
 
-  // Handle if apiResponse is a string (error case)
   if (typeof apiResponse === 'string') {
     return (
       <div>

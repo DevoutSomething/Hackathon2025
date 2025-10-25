@@ -7,22 +7,47 @@
 .math-display {
   display: block;
   text-align: center;
-  margin: 1rem 0;
+  margin: 1.5rem 0;
   overflow-x: auto;
   overflow-y: hidden;
 }
 
 .math-inline {
   display: inline;
+  vertical-align: middle;
 }
 
 /* Ensure KaTeX renders properly */
 .latex-container .katex {
-  font-size: 1.2em;
+  font-size: 1.3em;
+  font-family: KaTeX_Main, "Times New Roman", serif;
 }
 
 .latex-container .katex-display {
   margin: 1em 0;
   text-align: center;
+}
+
+/* Make sure sqrt and other symbols render properly */
+.latex-container .katex .sqrt > .root {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.latex-container .katex .sqrt .vlist-t {
+  display: inline-block;
+}
+
+/* Hide any stray vertical bars that might appear */
+.latex-container .katex .sqrt::before {
+  content: none;
+}
+
+/* Ensure proper font loading */
+.latex-container .katex .mord,
+.latex-container .katex .mop,
+.latex-container .katex .mbin,
+.latex-container .katex .mrel {
+  font-family: KaTeX_Main;
 }
 
