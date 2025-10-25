@@ -3,6 +3,7 @@ import "./App.css";
 import Home from "./pages/Home.tsx";
 import Learn from "./pages/Learn.tsx";
 import Result from "./pages/Result.tsx";
+import QuizForm from "./components/QuizForm.tsx";
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/learn" element={<Learn />} />
         <Route path="/result" element={<Result />} />
+        <Route path="/quiz" element={<QuizForm />} />
 
       </Routes>
     </div>
