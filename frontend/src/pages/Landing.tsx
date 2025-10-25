@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "../../styles/Landing.css";
+// SignInButton removed from Landing; header renders the auth control globally.
 
 export default function Landing() {
   return (
@@ -11,15 +12,6 @@ export default function Landing() {
       </div>
 
       <div className="content-wrapper">
-        <header className="landing-header">
-          <div className="logo-text">AI Learn</div>
-          <nav className="nav-links">
-            <a href="#features" className="nav-link">Features</a>
-            <a href="#about" className="nav-link">About</a>
-            <Link to="/learn" className="login-btn">Login</Link>
-          </nav>
-        </header>
-
         <main className="hero-section">
           <div className="hero-content">
             <h1 className="hero-title">
