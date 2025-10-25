@@ -1,4 +1,4 @@
-import React from "react";
+import React, { type JSX } from "react";
 import "katex/dist/katex.min.css";
 import "../../styles/LatexText.css";
 
