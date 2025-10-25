@@ -155,75 +155,13 @@ app.post("/userQuestionText", async (req, res) => {
   }
 });
 
-// ...existing code...
-app.post("/userQuestionQuiz", async (req, res) => {
-  console.log("=== /userQuestionQuiz endpoint called ===");
-  console.log("Request body:", req.body);
+app.post("/userQuestionQuiz", (req, res) => {
+  const prompt = req.body.prompt;
 
-  try {
-    const topic = req.body.topic;
-
-    if (!topic) {
-      console.log("Error: No topic provided");
-      return res.status(400).json({ error: "Topic is required" });
-    }
-
-    if (!CLAUDE_API_KEY) {
-      console.log("Error: CLAUDE_API_KEY not configured");
-      return res.status(500).json({ error: "CLAUDE_API_KEY not configured" });
-    }
-
-    const quizPrompt = `Generate a quiz on the topic: "${topic}". 
-Create 5 multiple choice questions with 4 options each.
-Return ONLY a valid JSON array with this exact structure (no markdown, no extra text):
-[
-  {
-    "question": "question text here",
-    "options": ["A) option1", "B) option2", "C) option3", "D) option4"],
-    "correctAnswer": "A) option1",
-    "explanation": "brief explanation"
-  }
-]`;
-
-    console.log("API Key found, calling Claude API for quiz...");
-    const claudeResponse = await callClaudeAPI(quizPrompt);
-
-    let quiz;
-    try {
-      let cleanResponse = claudeResponse.trim();
-      if (cleanResponse.startsWith('```')) {
-        cleanResponse = cleanResponse.replace(/```json?\n?/g, '').replace(/```\n?/g, '');
-      }
-      
-      const jsonMatch = cleanResponse.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        quiz = JSON.parse(jsonMatch[0]);
-      } else {
-        quiz = JSON.parse(cleanResponse);
-      }
-
-      console.log("Successfully parsed quiz with", quiz.length, "questions");
-    } catch (parseError) {
-      console.error("Failed to parse quiz JSON:", parseError);
-      console.error("Raw response:", claudeResponse);
-      return res.status(500).json({ 
-        error: "Failed to parse quiz from Claude",
-        raw: claudeResponse 
-      });
-    }
-
-    res.json({
-      topic: topic,
-      quiz: quiz,
-      success: true,
-    });
-  } catch (error) {
-    console.error("Error in /userQuestionQuiz:", error);
-    res.status(500).json({
-      error: "Failed to generate quiz",
-      message: error.message,
-    });
-  }
+  res.send({
+    promptReceived: prompt,
+    text: "not implimented yet",
+  });
 });
 
 app.post("/userQuestionVideo", (req, res) => {
