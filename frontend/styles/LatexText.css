@@ -1,26 +1,114 @@
-/* LaTeX Text Component Styles */
+/* LaTeX Document Styling */
 
 .latex-container {
   width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: "Computer Modern", "Latin Modern", "Times New Roman", serif;
+  font-size: 12pt;
+  line-height: 1.6;
+  color: #000;
 }
 
-.math-display {
+.latex-document {
+  text-align: justify;
+}
+
+.latex-paragraph {
+  margin: 1em 0;
+  text-indent: 1.5em;
+}
+
+.latex-paragraph:first-of-type {
+  text-indent: 0;
+}
+
+/* Section Headers */
+.latex-section {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 1.5em 0 0.5em 0;
+  text-align: left;
+  color: #000;
+  text-indent: 0;
+}
+
+.latex-subsection {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin: 1.2em 0 0.4em 0;
+  text-align: left;
+  color: #000;
+  text-indent: 0;
+}
+
+.latex-subsubsection {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 1em 0 0.3em 0;
+  text-align: left;
+  color: #000;
+  text-indent: 0;
+}
+
+/* Horizontal Rule */
+.latex-rule {
+  border: none;
+  border-top: 1px solid #000;
+  margin: 1.5em 0;
+}
+
+/* Text Formatting */
+.latex-container strong {
+  font-weight: bold;
+}
+
+.latex-container em {
+  font-style: italic;
+}
+
+/* Math Display */
+.latex-display-math {
   display: block;
   text-align: center;
-  margin: 1.5rem 0;
+  margin: 1.5em 0;
   overflow-x: auto;
   overflow-y: hidden;
+  padding: 0.5em 0;
 }
 
-.math-inline {
+.latex-inline-math {
   display: inline;
-  vertical-align: middle;
+  vertical-align: baseline;
+  margin: 0 0.1em;
 }
 
-/* Ensure KaTeX renders properly */
+/* Lists */
+.latex-list {
+  margin: 1em 0 1em 2em;
+  padding: 0;
+}
+
+.latex-list li {
+  margin: 0.5em 0;
+  list-style-position: outside;
+}
+
+.latex-list ul {
+  list-style-type: disc;
+}
+
+.latex-list ol {
+  list-style-type: decimal;
+}
+
+/* KaTeX Styling */
 .latex-container .katex {
-  font-size: 1.3em;
-  font-family: KaTeX_Main, "Times New Roman", serif;
+  font-size: 1.1em;
+  font-family: KaTeX_Main, "Computer Modern", serif;
 }
 
 .latex-container .katex-display {
@@ -28,7 +116,7 @@
   text-align: center;
 }
 
-/* Make sure sqrt and other symbols render properly */
+/* Square root and special symbols */
 .latex-container .katex .sqrt > .root {
   display: inline-block;
   vertical-align: middle;
@@ -38,9 +126,22 @@
   display: inline-block;
 }
 
-/* Hide any stray vertical bars that might appear */
 .latex-container .katex .sqrt::before {
   content: none;
+}
+
+/* Fractions */
+.latex-container .katex .frac-line {
+  border-bottom-width: 0.04em;
+}
+
+/* Error Display */
+.latex-error {
+  color: red;
+  font-family: monospace;
+  background: #fee;
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 
 /* Ensure proper font loading */
@@ -51,3 +152,10 @@
   font-family: KaTeX_Main;
 }
 
+/* Responsive */
+@media (max-width: 768px) {
+  .latex-container {
+    padding: 20px;
+    font-size: 11pt;
+  }
+}

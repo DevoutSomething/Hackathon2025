@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import LatexText from "./LatexText";
+import LatexText from "./latexText";
 interface ApiResponse {
   promptReceived: string;
   response: string;
@@ -20,18 +20,9 @@ export default function TextResult() {
     );
   }
 
-  // Handle if apiResponse is an object (success case)
   return (
     <div>
-      <h2>Your Question:</h2>
       <p>{apiResponse?.promptReceived}</p>
-
-      <h2>Claude's Response:</h2>
-      <LatexText text={apiResponse?.response} />
-      <br />
-      <LatexText text="Inline example: $E = mc^2$ and more text" />
-      <br />
-      <LatexText text="$$\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$" />
     </div>
   );
 }

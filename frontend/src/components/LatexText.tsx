@@ -1,4 +1,4 @@
-import React, { type JSX } from "react";
+import React from "react";
 import "katex/dist/katex.min.css";
 import "../../styles/LatexText.css";
 
@@ -7,116 +7,123 @@ interface LatexTextProps {
 }
 
 export default function LatexText({ text }: LatexTextProps) {
-  const [processedContent, setProcessedContent] = React.useState<JSX.Element[]>([]);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const renderLatex = async () => {
-      // Dynamically import KaTeX to ensure it loads properly
+      if (!containerRef.current || !text) return;
+
       const katex = await import("katex");
       
-      const parts: JSX.Element[] = [];
-      let lastIndex = 0;
-      let key = 0;
+      let html = text;
 
-      // Find all display math ($$...$$)
-      const displayMathRegex = /\$\$([^$]+?)\$\$/g;
-      const inlineMathRegex = /\$([^$\n]+?)\$/g;
+      // Process LaTeX commands and convert to HTML
 
-      let tempText = text;
+      // Handle section headers (LaTeX-style)
+      html = html.replace(/\\section\{([^}]+)\}/g, '<h2 class="latex-section">$1</h2>');
+      html = html.replace(/\\subsection\{([^}]+)\}/g, '<h3 class="latex-subsection">$1</h3>');
+      html = html.replace(/\\subsubsection\{([^}]+)\}/g, '<h4 class="latex-subsubsection">$1</h4>');
+
+      // Handle markdown-style headers and convert to LaTeX style
+      html = html.replace(/^## (.+)$/gm, '<h2 class="latex-section">$1</h2>');
+      html = html.replace(/^### (.+)$/gm, '<h3 class="latex-subsection">$1</h3>');
       
-      // First, handle display math
-      let displayMatch;
-      const displayMatches: Array<{start: number, end: number, latex: string}> = [];
+      // Handle horizontal rules
+      html = html.replace(/^---+$/gm, '<hr class="latex-rule">');
       
-      while ((displayMatch = displayMathRegex.exec(text)) !== null) {
-        displayMatches.push({
-          start: displayMatch.index,
-          end: displayMatch.index + displayMatch[0].length,
-          latex: displayMatch[1]
-        });
-      }
+      // Handle text formatting
+      html = html.replace(/\\textbf\{([^}]+)\}/g, '<strong>$1</strong>');
+      html = html.replace(/\\textit\{([^}]+)\}/g, '<em>$1</em>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-      // Then handle inline math
-      let inlineMatch;
-      const inlineMatches: Array<{start: number, end: number, latex: string}> = [];
-      
-      while ((inlineMatch = inlineMathRegex.exec(text)) !== null) {
-        // Make sure this isn't part of a display math
-        const isInDisplayMath = displayMatches.some(
-          dm => inlineMatch!.index >= dm.start && inlineMatch!.index < dm.end
-        );
-        if (!isInDisplayMath) {
-          inlineMatches.push({
-            start: inlineMatch.index,
-            end: inlineMatch.index + inlineMatch[0].length,
-            latex: inlineMatch[1]
-          });
-        }
-      }
-
-      // Combine and sort all matches
-      const allMatches = [
-        ...displayMatches.map(m => ({...m, type: 'display' as const})),
-        ...inlineMatches.map(m => ({...m, type: 'inline' as const}))
-      ].sort((a, b) => a.start - b.start);
-
-      // Build the content
-      lastIndex = 0;
-      for (const match of allMatches) {
-        // Add text before the math
-        if (match.start > lastIndex) {
-          const textBefore = text.substring(lastIndex, match.start);
-          if (textBefore) {
-            parts.push(<span key={key++}>{textBefore}</span>);
-          }
-        }
-
-        // Render the math
+      // Handle display math ($$...$$ or \[...\])
+      html = html.replace(/\$\$([^$]+?)\$\$/g, (match, latex) => {
         try {
-          const html = katex.default.renderToString(match.latex.trim(), {
-            displayMode: match.type === 'display',
+          const rendered = katex.default.renderToString(latex.trim(), {
+            displayMode: true,
             throwOnError: false,
             trust: true,
+            strict: false,
           });
-
-          if (match.type === 'display') {
-            parts.push(
-              <div 
-                key={key++} 
-                className="math-display"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            );
-          } else {
-            parts.push(
-              <span 
-                key={key++} 
-                className="math-inline"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            );
-          }
+          return `<div class="latex-display-math">${rendered}</div>`;
         } catch (error) {
-          console.error("LaTeX rendering error:", error);
-          parts.push(
-            <span key={key++} style={{ color: 'red' }}>
-              Error: {match.latex}
-            </span>
-          );
+          console.error("LaTeX display error:", error);
+          return `<div class="latex-error">Error: ${latex}</div>`;
         }
+      });
 
-        lastIndex = match.end;
-      }
-
-      // Add remaining text
-      if (lastIndex < text.length) {
-        const remainingText = text.substring(lastIndex);
-        if (remainingText) {
-          parts.push(<span key={key++}>{remainingText}</span>);
+      html = html.replace(/\\\[([^\]]+?)\\\]/g, (match, latex) => {
+        try {
+          const rendered = katex.default.renderToString(latex.trim(), {
+            displayMode: true,
+            throwOnError: false,
+            trust: true,
+            strict: false,
+          });
+          return `<div class="latex-display-math">${rendered}</div>`;
+        } catch (error) {
+          console.error("LaTeX display error:", error);
+          return `<div class="latex-error">Error: ${latex}</div>`;
         }
-      }
+      });
 
-      setProcessedContent(parts);
+      // Handle inline math ($...$ or \(...\))
+      html = html.replace(/\$([^$\n]+?)\$/g, (match, latex) => {
+        try {
+          const rendered = katex.default.renderToString(latex.trim(), {
+            displayMode: false,
+            throwOnError: false,
+            trust: true,
+            strict: false,
+          });
+          return `<span class="latex-inline-math">${rendered}</span>`;
+        } catch (error) {
+          console.error("LaTeX inline error:", error);
+          return `<span class="latex-error">Error: ${latex}</span>`;
+        }
+      });
+
+      html = html.replace(/\\\(([^)]+?)\\\)/g, (match, latex) => {
+        try {
+          const rendered = katex.default.renderToString(latex.trim(), {
+            displayMode: false,
+            throwOnError: false,
+            trust: true,
+            strict: false,
+          });
+          return `<span class="latex-inline-math">${rendered}</span>`;
+        } catch (error) {
+          console.error("LaTeX inline error:", error);
+          return `<span class="latex-error">Error: ${latex}</span>`;
+        }
+      });
+
+      // Handle itemize/enumerate lists
+      html = html.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g, (match, content) => {
+        const items = content.split('\\item').filter((item: string) => item.trim());
+        const listItems = items.map((item: string) => `<li>${item.trim()}</li>`).join('');
+        return `<ul class="latex-list">${listItems}</ul>`;
+      });
+
+      html = html.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g, (match, content) => {
+        const items = content.split('\\item').filter((item: string) => item.trim());
+        const listItems = items.map((item: string) => `<li>${item.trim()}</li>`).join('');
+        return `<ol class="latex-list">${listItems}</ol>`;
+      });
+
+      // Handle markdown-style lists
+      html = html.replace(/^- (.+)$/gm, '<li class="latex-list-item">$1</li>');
+      html = html.replace(/(<li class="latex-list-item">.*<\/li>\n?)+/g, '<ul class="latex-list">$&</ul>');
+
+      // Handle paragraphs
+      html = html.replace(/\n\n+/g, '</p><p class="latex-paragraph">');
+      html = html.replace(/\n/g, '<br>');
+      
+      // Wrap in document structure
+      html = `<div class="latex-document"><p class="latex-paragraph">${html}</p></div>`;
+
+      containerRef.current.innerHTML = html;
     };
 
     renderLatex();
@@ -124,15 +131,8 @@ export default function LatexText({ text }: LatexTextProps) {
 
   return (
     <div
-      style={{
-        lineHeight: "1.8",
-        fontSize: "16px",
-        padding: "10px",
-        minHeight: "20px",
-      }}
+      ref={containerRef}
       className="latex-container"
-    >
-      {processedContent}
-    </div>
+    />
   );
 }
