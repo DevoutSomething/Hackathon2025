@@ -20,8 +20,12 @@ export default function LatexText({ text }: LatexTextProps) {
             p: ({ children }) => <p className="latex-paragraph">{children}</p>,
             h1: ({ children }) => <h1 className="latex-section">{children}</h1>,
             h2: ({ children }) => <h2 className="latex-section">{children}</h2>,
-            h3: ({ children }) => <h3 className="latex-subsection">{children}</h3>,
-            h4: ({ children }) => <h4 className="latex-subsubsection">{children}</h4>,
+            h3: ({ children }) => (
+              <h3 className="latex-subsection">{children}</h3>
+            ),
+            h4: ({ children }) => (
+              <h4 className="latex-subsubsection">{children}</h4>
+            ),
             ul: ({ children }) => <ul className="latex-list">{children}</ul>,
             ol: ({ children }) => <ol className="latex-list">{children}</ol>,
             hr: () => <hr className="latex-rule" />,
