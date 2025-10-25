@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import SignInButton from "./SignInButton";
+import "../../styles/Header.css";
 
 export default function Header() {
   const location = useLocation();
