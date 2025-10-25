@@ -1,4 +1,3 @@
-import React from "react";
 import { useLocation } from "react-router-dom";
 import LatexText from "./LatexText";
 interface ApiResponse {
@@ -21,7 +20,7 @@ export default function TextResult() {
   }
 
   return (
-    <div>
+    <div className="text-result-container">
         <LatexText text={apiResponse.response} />
     </div>
   );

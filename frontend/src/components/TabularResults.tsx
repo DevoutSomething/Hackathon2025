@@ -46,11 +46,19 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
     if (isMounted.current) setQuizLoading(true);
     const requestId = Date.now();
     latestRequestId.current = requestId;
+    
+    // Create enhanced prompt with previous quiz to avoid duplicates
+    let enhancedPrompt = prompt;
+    if (quiz.length > 0) {
+      const previousQuestions = quiz.map((q, i) => `${i + 1}. ${q.question}`).join('\n');
+      enhancedPrompt = `${prompt}\n\nIMPORTANT: Generate completely NEW and DIFFERENT quiz questions. Do NOT repeat any of these previous questions:\n${previousQuestions}\n\nCreate fresh, unique questions that test different aspects of the topic.`;
+    }
+    
     try {
       const response = await fetch(`${apiUrl}/userQuestionQuiz`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: prompt }),
+        body: JSON.stringify({ topic: enhancedPrompt }),
       });
       const data = await response.json();
       if (!response.ok) {

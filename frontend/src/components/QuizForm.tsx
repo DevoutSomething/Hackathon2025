@@ -25,7 +25,6 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
   const [hasAnsweredCorrectly, setHasAnsweredCorrectly] = useState<boolean>(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAttempts, setWrongAttempts] = useState<Set<string>>(new Set());
-  const [showResults, setShowResults] = useState<boolean>(false);
 
   // Reset flow when a new quiz arrives
   useEffect(() => {
@@ -33,7 +32,6 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
     setHasAnsweredCorrectly(false);
     setSelectedAnswer(null);
     setWrongAttempts(new Set());
-    setShowResults(false);
     setUserAnswers({});
   }, [quiz]);
 
@@ -61,7 +59,13 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
       setSelectedAnswer(null);
       setWrongAttempts(new Set());
     } else {
-      setShowResults(true);
+      // Quiz completed - generate a new one
+      setUserAnswers({});
+      setCurrentIndex(0);
+      setHasAnsweredCorrectly(false);
+      setSelectedAnswer(null);
+      setWrongAttempts(new Set());
+      onGenerate();
     }
   };
 
@@ -75,12 +79,6 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
     }
   };
 
-  // Score
-  const score = quiz.reduce((acc, q, i) => {
-    if (userAnswers[i] === q.correctAnswer) acc++;
-    return acc;
-  }, 0);
-
   return (
     <div className="quiz-container">
       <h2>AI Quiz Generator</h2>
@@ -91,7 +89,7 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
       )}
 
       {/* One-question-at-a-time with immediate feedback */}
-      {!showResults && quiz.length > 0 && (
+      {quiz.length > 0 && (
         <div className="quiz-section">
           <div className="quiz-progress">
             <div className="progress-track">
@@ -133,6 +131,7 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
             {hasAnsweredCorrectly && (
               <div className="feedback correct">
                 <span>✓ Correct!</span>
+                <p className="explanation">{quiz[currentIndex].explanation}</p>
               </div>
             )}
             {wrongAttempts.size > 0 && !hasAnsweredCorrectly && (
@@ -149,7 +148,7 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
               )}
               {hasAnsweredCorrectly && (
                 <button onClick={handleNext} className="next-button">
-                  {currentIndex + 1 < quiz.length ? "Next Question →" : "View Results"}
+                  {currentIndex + 1 < quiz.length ? "Next Question →" : "Finish & Create New Quiz"}
                 </button>
               )}
             </div>
@@ -157,46 +156,6 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
         </div>
       )}
 
-      {/* Results display */}
-      {showResults && (
-        <div className="results-section">
-          <h3>
-            You scored {score} / {quiz.length}
-          </h3>
-
-          <div className="results-list">
-            {quiz.map((q, i) => (
-              <div key={i} className="result-item">
-                <p>
-                  <strong>Q{i + 1}:</strong> {q.question}
-                </p>
-                <p>
-                  <strong>Your answer:</strong> {userAnswers[i] || "No answer"}
-                </p>
-                <p>
-                  <strong>Correct answer:</strong> {q.correctAnswer}
-                </p>
-                <p className="explanation">{q.explanation}</p>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => {
-              setUserAnswers({});
-              setCurrentIndex(0);
-              setHasAnsweredCorrectly(false);
-              setSelectedAnswer(null);
-              setWrongAttempts(new Set());
-              setShowResults(false);
-              onGenerate();
-            }}
-            className="reset-button"
-          >
-            Create new quiz
-          </button>
-        </div>
-      )}
     </div>
   );
 };

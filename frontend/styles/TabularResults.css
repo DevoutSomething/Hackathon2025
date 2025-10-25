@@ -124,6 +124,39 @@
   margin-bottom: 1rem;
 }
 
+/* Text Result Container */
+.text-result-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 2px solid rgba(74, 144, 226, 0.2);
+  box-shadow: 0 4px 20px rgba(74, 144, 226, 0.08);
+  padding: 2rem;
+}
+
+.text-result-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.text-result-container::-webkit-scrollbar-track {
+  background: rgba(74, 144, 226, 0.1);
+  border-radius: 4px;
+}
+
+.text-result-container::-webkit-scrollbar-thumb {
+  background: rgba(74, 144, 226, 0.3);
+  border-radius: 4px;
+}
+
+.text-result-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 144, 226, 0.5);
+}
+
 /* Quiz Placeholder */
 
 .quiz-result-placeholder {
