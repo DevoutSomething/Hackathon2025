@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import "../../styles/Landing.css";
 
 export default function Landing() {
@@ -13,9 +14,9 @@ export default function Landing() {
         <header className="landing-header">
           <div className="logo-text">AI Learn</div>
           <nav className="nav-links">
-            <a href="#" className="nav-link">Features</a>
-            <a href="#" className="nav-link">About</a>
-            <a href="#" className="nav-link">Contact</a>
+            <a href="#features" className="nav-link">Features</a>
+            <a href="#about" className="nav-link">About</a>
+            <Link to="/learn" className="login-btn">Login</Link>
           </nav>
         </header>
 
@@ -31,9 +32,9 @@ export default function Landing() {
               Visualize concepts, take quizzes, and master any subject with personalized guidance.
             </p>
             <div className="cta-buttons">
-              <button className="primary-btn">
+              <Link to="/learn" className="primary-btn">
                 Get Started
-              </button>
+              </Link>
               <button className="secondary-btn">
                 Watch Demo
               </button>
