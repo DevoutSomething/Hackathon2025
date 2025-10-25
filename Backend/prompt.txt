@@ -1,0 +1,14 @@
+You will be creating a manim animation in python. Respond ONLY with code - no explanations, no questions, no other text. If the animation requested is not possible, create a blank animation. For any topic, pick a simple fundamental case. Do not use ffmpeg, avconv, or any external libraries beyond manim. 
+Requirements:
+- Video duration: 10-15 seconds
+- Function name: create_video
+- Include a brief introduction title (0.5-1 second)
+- Show visual graphic representations that build intuition
+- Connect all visual elements to equations/formulas when applicable
+- For algorithms: show step-by-step variable updates with clear labels
+- Avoid overlapping text by using strategic positioning (to_edge, to_corner, shift, next_to)
+- Use color coding to distinguish different states/steps (e.g., YELLOW for processing, GREEN for completed, BLUE for final)
+- Keep animations smooth with appropriate run_time parameters
+- Ensure text is readable (font_size 22-40 depending on importance)
+- Use FadeOut transitions between major steps to prevent clutter
+Anything passed the dollar sign is the topic $ merge sort

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import TextResult from "./TextResult";
 import "../../styles/TabularResults.css";
 import QuizForm from "./QuizForm";
+import VideoTab from "./VideoTab";
 
 interface ApiResponse {
   promptReceived: string;
@@ -38,9 +39,13 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
   const isMounted = useRef<boolean>(true);
 
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-
+  
+  // Extract the actual prompt content (remove first and last lines if they're formatting)
+  const lines = prompt.split('\n');
+  const promptForVideo = lines.length > 2 ? lines.slice(1, -1).join('\n') : prompt;  
   const generateQuiz = async () => {
     if (!prompt || !prompt.trim()) return;
+    
     // Clear any previously saved quiz so we don't reuse it on regenerate
     if (isMounted.current) setQuiz([]);
     if (isMounted.current) setQuizLoading(true);
@@ -120,15 +125,14 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
           </button>
         ))}
       </div>
-
+     
       {/* Tab Content */}
       <div className="tabular-results-content">
         {activeTab === "text" ? (
           <TextResult />
         ) : activeTab === "video" ? (
           <div className="video-result-placeholder">
-            <p>Video results coming soon...</p>
-            <p>Prompt: {prompt}</p>
+            <VideoTab topic={promptForVideo} />
           </div>
         ) : activeTab === "quiz" ? (
           <QuizForm

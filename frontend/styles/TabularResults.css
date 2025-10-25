@@ -99,14 +99,13 @@
 /* Video Placeholder */
 
 .video-result-placeholder {
-  padding: 4rem 2rem;
-  text-align: center;
+  padding: 2rem;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
   border-radius: 20px;
   border: 2px solid rgba(74, 144, 226, 0.2);
   box-shadow: 0 4px 20px rgba(74, 144, 226, 0.08);
-  max-width: 600px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 

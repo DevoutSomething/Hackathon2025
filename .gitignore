@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 *.env
+*mp4
+*pyc
+*svg
+*.tex
+*partial
+**/partial_movie_files/**
+**/partial_movie_file_list.txt
