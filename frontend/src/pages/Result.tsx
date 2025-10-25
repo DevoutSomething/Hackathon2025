@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import TabularResults from "../components/TabularResults";
 import "../../styles/Result.css";
 
@@ -14,6 +14,11 @@ export default function Result() {
   
   return (
     <div className="result-page"> 
+      <div className="result-header">
+        <Link to="/learn" className="new-learn-btn">
+          Learn something new
+        </Link>
+      </div>
       <TabularResults apiResponse={apiResponse} type="text"/>
     </div>
   );
