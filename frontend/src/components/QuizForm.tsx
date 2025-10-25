@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import type { FormEvent, ChangeEvent } from "react";
+ 
 import "../../styles/QuizForm.css";
 
-interface QuizQuestion {
+export interface QuizQuestion {
   question: string;
   options: string[];
   correctAnswer: string;
@@ -11,53 +11,18 @@ interface QuizQuestion {
 
 type UserAnswers = Record<number, string>;
 
-const QuizForm: React.FC = () => {
-  const [topic, setTopic] = useState<string>("");
-  const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
+export interface QuizFormProps {
+  prompt?: string;
+  quiz: QuizQuestion[];
+  loading: boolean;
+  onGenerate: () => void | Promise<void>;
+}
+
+const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, loading, onGenerate }) => {
+  const [prompt] = useState<string>(initialPrompt);
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
   const [submitted, setSubmitted] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-
-  // ✅ Handle quiz generation
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!topic.trim()) {
-      alert("Please enter a topic.");
-      return;
-    }
-
-    setLoading(true);
-    setSubmitted(false);
-
-    try {
-      const response = await fetch(`${apiUrl}/userQuestionQuiz`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate quiz");
-      }
-
-      if (Array.isArray(data.quiz)) {
-        setQuiz(data.quiz);
-      } else {
-        alert("Invalid quiz format received from server.");
-      }
-    } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      console.error("Error fetching quiz:", err);
-      alert(`Error: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  
 
   // ✅ Handle selecting an answer
   const handleAnswerSelect = (questionIndex: number, answer: string) => {
@@ -79,21 +44,10 @@ const QuizForm: React.FC = () => {
     <div className="quiz-container">
       <h2>AI Quiz Generator</h2>
 
-      {/* Form for topic input */}
-      <form onSubmit={handleSubmit} className="quiz-form">
-        <input
-          type="text"
-          placeholder="Enter a topic (e.g., recursion, Newton's Laws)"
-          value={topic}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setTopic(e.target.value)
-          }
-          className="quiz-input"
-        />
-        <button type="submit" disabled={loading} className="quiz-button">
-          {loading ? "Generating..." : "Generate Quiz"}
-        </button>
-      </form>
+      {loading && <p className="loading-text">Generating quiz...</p>}
+      {!loading && !prompt && (
+        <p className="loading-text">No prompt provided to generate a quiz.</p>
+      )}
 
       {/* Quiz display */}
       {!submitted && quiz.length > 0 && (
@@ -151,14 +105,13 @@ const QuizForm: React.FC = () => {
 
           <button
             onClick={() => {
-              setQuiz([]);
               setUserAnswers({});
               setSubmitted(false);
-              setTopic("");
+              onGenerate();
             }}
             className="reset-button"
           >
-            Try Another Topic
+            Regenerate Quiz
           </button>
         </div>
       )}
