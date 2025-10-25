@@ -388,7 +388,7 @@ app.post("/updateUserSettings", (req, res) => {
 app.post("/createVideo", async (req, res) => { 
     const masterPrompt = `You will be creating a manim animation in python. Respond ONLY with code - no explanations, no questions, no other text. If the animation requested is not possible, create a blank animation. For any topic, pick a simple fundamental case. Do not use ffmpeg, avconv, or any external libraries beyond manim. 
 Requirements:
-- Video duration: 10-15 seconds
+- Video duration: 20 - 30 seconds make sure you focus on the animation being as clear and intuitive as possible above all other directions besides the sntax and libraries
 - Class name: create_video (exactly this name)
 - Include a brief introduction title (0.5-1 second)
 - Show visual graphic representations that build intuition
@@ -401,98 +401,98 @@ Requirements:
 - Use FadeOut transitions between major steps to prevent clutter
 - The class name should always be "create_video" (not "CreateVideo" or any other variation)
 - example working output from manim import, it should be in the same exact format, just different animation. 
-
-from manim import *
-
+- dont use any external libraries besides manim
+- IMPORTANT: Use only Text() for text rendering, never use MathTex, Tex, or any LaTeX-based text
+- Avoid mathematical symbols that require LaTeX compilation
+- Use simple text strings instead of LaTeX expressions
+- For equations, use plain text like "x^2 + y^2 = r^2" instead of LaTeX syntax
+- DO NOT use Latex syntax DO NOT use libraries besides Manim. 
+-NEVER have  compile_tex    
+ from manim import *
 class create_video(Scene):
     def construct(self):
-        title = Text("Merge Sort", font_size=44)
-        subtitle = Text("T(n) = 2T(n/2) + O(n)", font_size=28, color=YELLOW).next_to(title, DOWN)
-        self.play(Write(title), Write(subtitle), run_time=0.8)
-        self.wait(0.4)
-        self.play(FadeOut(title), FadeOut(subtitle))
-        
-        array = [8, 3, 5, 1]
-        
-        def create_boxes(values, color=WHITE):
-            boxes = VGroup(*[
-                VGroup(
-                    Square(side_length=0.65, color=color, stroke_width=3),
-                    Text(str(val), font_size=26)
-                )
-                for val in values
-            ]).arrange(RIGHT, buff=0.18)
-            for box in boxes:
-                box[1].move_to(box[0].get_center())
-            return boxes
-        
-        original = create_boxes(array)
-        original.to_edge(UP, buff=1)
-        self.play(Create(original), run_time=0.6)
-        
-        label1 = Text("Divide", font_size=24, color=YELLOW).to_corner(UL).shift(DOWN * 0.5)
-        self.play(Write(label1), run_time=0.4)
-        
-        left1 = create_boxes([8, 3])
-        right1 = create_boxes([5, 1])
-        left1.move_to(UP * 0.8 + LEFT * 1.8)
-        right1.move_to(UP * 0.8 + RIGHT * 1.8)
-        
-        self.play(
-            TransformFromCopy(original[:2], left1),
-            TransformFromCopy(original[2:], right1),
-            run_time=0.7
+        # Title
+        title = Text("Curl of a Vector Field", font_size=40, color=BLUE)
+        self.play(Write(title))
+        self.wait(0.5)
+        self.play(FadeOut(title))
+        # Create a grid
+        grid = NumberPlane(
+            x_range=[-3, 3, 1],
+            y_range=[-3, 3, 1],
+            background_line_style={
+                "stroke_color": GRAY,
+                "stroke_width": 1,
+                "stroke_opacity": 0.3
+            }
+        ).scale(0.8)
+        # Rotating vector field
+        def rotating_field(pos):
+            x, y = pos[0], pos[1]
+            return np.array([-y, x, 0]) * 0.3
+        # Create vector field
+        vectors = []
+        for x in np.arange(-2.5, 3, 0.8):
+            for y in np.arange(-2.5, 3, 0.8):
+                start_pos = np.array([x, y, 0]) * 0.8
+                direction = rotating_field(start_pos)
+                if np.linalg.norm(direction) > 0.01:
+                    arrow = Arrow(
+                        start_pos,
+                        start_pos + direction,
+                        buff=0,
+                        stroke_width=3,
+                        max_tip_length_to_length_ratio=0.2,
+                        color=YELLOW
+                    )
+                    vectors.append(arrow)
+        vector_group = VGroup(*vectors)
+        self.play(Create(grid), run_time=1)
+        self.play(Create(vector_group), run_time=2)
+        # Add curl label
+        curl_label = Text("Positive Curl", font_size=32, color=GREEN).to_edge(UP)
+        self.play(Write(curl_label))
+        # Create rotation indicator at origin
+        circle = Circle(radius=0.5, color=GREEN, stroke_width=4).move_to(ORIGIN)
+        self.play(Create(circle), run_time=1)
+        # Rotation arrow
+        rotation_arrow = CurvedArrow(
+            start_point=circle.point_from_proportion(0.75),
+            end_point=circle.point_from_proportion(0.25),
+            color=GREEN,
+            stroke_width=5
         )
-        
-        left2a = create_boxes([8]).move_to(DOWN * 0.4 + LEFT * 2.5)
-        left2b = create_boxes([3]).move_to(DOWN * 0.4 + LEFT * 1.1)
-        right2a = create_boxes([5]).move_to(DOWN * 0.4 + RIGHT * 1.1)
-        right2b = create_boxes([1]).move_to(DOWN * 0.4 + RIGHT * 2.5)
-        
+        self.play(Create(rotation_arrow), run_time=1)
+        self.wait(1)
+        # Fade rotation indicators
+        self.play(FadeOut(circle), FadeOut(rotation_arrow))
+        # Show curl formula
+        formula = Text("curl = dF_y/dx - dF_x/dy", font_size=28, color=WHITE).to_edge(DOWN)
+        self.play(Write(formula))
+        self.wait(1)
+        # Highlight vectors in yellow during rotation
+        self.play(vector_group.animate.set_color(BLUE), run_time=1)
+        self.wait(1)
+        # Show counterclockwise rotation with traced path
+        dot = Dot(color=RED, radius=0.08).move_to([1.6, 0, 0])
+        self.play(FadeIn(dot))
+        path = Circle(radius=2, color=RED, stroke_width=3).scale(0.8)
+        self.play(MoveAlongPath(dot, path), run_time=3, rate_func=linear)
+        self.wait(1)
+        # Fade all
         self.play(
-            TransformFromCopy(left1[0], left2a),
-            TransformFromCopy(left1[1], left2b),
-            TransformFromCopy(right1[0], right2a),
-            TransformFromCopy(right1[1], right2b),
-            run_time=0.7
+            FadeOut(grid),
+            FadeOut(vector_group),
+            FadeOut(curl_label),
+            FadeOut(formula),
+            FadeOut(dot),
+            run_time=1
         )
-        
-        self.play(FadeOut(label1))
-        label2 = Text("Merge & Sort", font_size=24, color=GREEN).to_corner(UL).shift(DOWN * 0.5)
-        self.play(Write(label2), run_time=0.4)
-        
-        merged_left = create_boxes([3, 8], GREEN)
-        merged_right = create_boxes([1, 5], GREEN)
-        merged_left.move_to(DOWN * 1.8 + LEFT * 1.8)
-        merged_right.move_to(DOWN * 1.8 + RIGHT * 1.8)
-        
-        self.play(
-            FadeOut(left2a), FadeOut(left2b), FadeOut(right2a), FadeOut(right2b),
-            Create(merged_left), Create(merged_right),
-            run_time=0.8
-        )
-        
-        arrow_l = Arrow(left1.get_bottom(), merged_left.get_top(), buff=0.1, color=GREEN, stroke_width=2)
-        arrow_r = Arrow(right1.get_bottom(), merged_right.get_top(), buff=0.1, color=GREEN, stroke_width=2)
-        self.play(Create(arrow_l), Create(arrow_r), run_time=0.5)
-        
-        final = create_boxes([1, 3, 5, 8], BLUE)
-        final.move_to(DOWN * 3.2)
-        
-        self.play(
-            FadeOut(merged_left), FadeOut(merged_right), FadeOut(arrow_l), FadeOut(arrow_r),
-            Create(final),
-            run_time=0.8
-        )
-        
-        arrow_final = Arrow(UP * 1.5, final.get_top(), buff=0.1, color=BLUE, stroke_width=2)
-        self.play(Create(arrow_final), run_time=0.4)
-        
-        complete = Text("Sorted!", font_size=30, color=BLUE).to_corner(DR).shift(UP * 0.3)
-        complexity = Text("O(n log n)", font_size=26, color=YELLOW).next_to(complete, UP, buff=0.3)
-        self.play(Write(complete), Write(complexity), run_time=0.6)
-        self.wait(1.2)
-        
+        # Final message
+        final = Text("Curl measures rotation", font_size=36, color=GREEN)
+        self.play(Write(final))
+        self.wait(1)
+        self.play(FadeOut(final))
 Anything passed the dollar sign is the topic $`
   try {   
     const userPrompt = req.body.prompt;

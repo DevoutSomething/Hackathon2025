@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './VideoTab.css';
 
 interface VideoResponse {
@@ -15,20 +15,40 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pythonScript, setPythonScript] = useState<string | null>(null);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const generationInProgress = useRef(false);
+  const currentTopic = useRef<string | null>(null);
+  const hasGeneratedVideo = useRef(false);
+  
   console.log(pythonScript)
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
-    if (topic) {
+    if (topic && topic !== currentTopic.current) {
+      // Reset flags when topic changes
+      hasGeneratedVideo.current = false;
+      currentTopic.current = topic;
+      setIsVideoReady(false);
+    }
+    
+    if (topic && !hasGeneratedVideo.current && !generationInProgress.current) {
+      hasGeneratedVideo.current = true;
       generateVideo();
     }
   }, [topic]);
 
   const generateVideo = async () => {
+    // Prevent multiple simultaneous generations
+    if (generationInProgress.current) {
+      return;
+    }
+    
+    generationInProgress.current = true;
     setIsLoading(true);
     setError(null);
     setVideoUrl(null);
     setPythonScript(null);
+    setIsVideoReady(false);
 
     try {
       // Step 1: Call the createVideo endpoint to get Python script
@@ -49,9 +69,12 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
       if (!data.success) {
         throw new Error('Failed to generate video script');
       }
-      let lines = data.response.split('\n');     
-      let middleLines = lines.slice(1, -1);
-      let result = middleLines.join('\n');
+        let lines = data.response.split('\n');     
+        let middleLines = lines.slice(1, -1);
+        let result = middleLines
+          .filter(line => line.trim() !== '')
+          .filter(line => !line.trim().startsWith('```')) 
+          .join('\n');
       setPythonScript(result);
       await executeManimScript(result);
 
@@ -60,6 +83,7 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
+      generationInProgress.current = false;
     }
   };
 
@@ -76,10 +100,6 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to execute script: ${response.status}`);
-      }
-
       const result = await response.json();
       
       if (result.success && result.videoUrl) {
@@ -88,6 +108,8 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
           ? result.videoUrl 
           : `${apiUrl}${result.videoUrl}`;
         setVideoUrl(fullVideoUrl);
+        setIsVideoReady(true); // Only show video when completely ready
+        setError(null); // Clear any previous errors
       } else {
         throw new Error(result.error || 'Failed to generate video');
       }
@@ -99,6 +121,8 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
   };
 
   const handleRegenerate = () => {
+    hasGeneratedVideo.current = false;
+    setIsVideoReady(false);
     generateVideo();
   };
 
@@ -131,7 +155,7 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
         </div>
       )}
 
-      {videoUrl && (
+      {videoUrl && isVideoReady && (
         <div className="video-container">
           <h3>Generated Video</h3>
           <video 
