@@ -207,6 +207,8 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
           <h3>Generated Video</h3>
           <video 
             controls 
+            autoPlay
+            muted
             className="generated-video"
             src={videoUrl}
             poster="/api/placeholder"
