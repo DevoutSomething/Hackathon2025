@@ -6,18 +6,21 @@ import Result from "./pages/Result.tsx";
 import Landing from "./pages/Landing.tsx";
 import Video from "./pages/Video.tsx";
 import Header from "./components/Header";
+import { UserSettingsProvider } from "./contexts/UserSettingsContext";
 
 function App() {
   return (
-    <div>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/learn" element={<Learn />} />
-        <Route path="/result" element={<Result />} />
-        <Route path="/video" element={<Video />} />
-      </Routes>
-    </div>
+    <UserSettingsProvider>
+      <div>
+        <Header />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/learn" element={<Learn />} />
+          <Route path="/result" element={<Result />} />
+          <Route path="/video" element={<Video />} />
+        </Routes>
+      </div>
+    </UserSettingsProvider>
   );
 }
 

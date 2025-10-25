@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-
+import { useUserSettings } from "../contexts/UserSettingsContext";
 import "../../styles/QuizForm.css";
 
 export interface QuizQuestion {
@@ -25,6 +25,7 @@ const QuizForm: React.FC<QuizFormProps> = ({ prompt: initialPrompt = "", quiz, l
   const [hasAnsweredCorrectly, setHasAnsweredCorrectly] = useState<boolean>(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAttempts, setWrongAttempts] = useState<Set<string>>(new Set());
+  const { settings } = useUserSettings();
 
   // Reset flow when a new quiz arrives
   useEffect(() => {

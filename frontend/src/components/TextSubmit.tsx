@@ -1,10 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useUserSettings } from "../contexts/UserSettingsContext";
 import "../../styles/TextSubmit.css";
 
 export default function TextSubmit() {
   const [userPrompt, setUserPrompt] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
+  const { settings } = useUserSettings();
 
   const apiUrl = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
@@ -19,7 +21,11 @@ export default function TextSubmit() {
     fetch(apiUrl + "/userQuestionText", {
       method: "POST",
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: userPrompt }),
+      body: JSON.stringify({ 
+        prompt: userPrompt,
+        educationLevel: settings.educationLevel,
+        learningStyle: settings.learningStyle
+      }),
     })
     .then(response => response.json())
     .then(data => {

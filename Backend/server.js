@@ -221,6 +221,8 @@ app.post("/userQuestionText", async (req, res) => {
 
   try {
     const userPrompt = req.body.prompt;
+    const educationLevel = req.body.educationLevel || 'high-school';
+    const learningStyle = req.body.learningStyle || 'visual';
 
     if (!userPrompt) {
       console.log("Error: No prompt provided");
@@ -237,8 +239,17 @@ app.post("/userQuestionText", async (req, res) => {
     }
 
     console.log("API Key found, calling Groq API...");
-    // Call Groq API with the user's prompt
-    const groqResponse = await callGroqAPI(userPrompt);
+    console.log(`User settings - Education: ${educationLevel}, Learning Style: ${learningStyle}`);
+    
+    // Create enhanced prompt with user settings
+    const enhancedPrompt = `User Education Level: ${educationLevel}
+User Learning Style: ${learningStyle}
+User Question: ${userPrompt}
+
+Please tailor your response to match their education level and learning style.`;
+    
+    // Call Groq API with the enhanced prompt
+    const groqResponse = await callGroqAPI(enhancedPrompt);
 
     console.log("Successfully got response from Groq");
     res.json({
@@ -262,6 +273,8 @@ app.post("/userQuestionQuiz", async (req, res) => {
 
   try {
     const topic = req.body.topic;
+    const educationLevel = req.body.educationLevel || 'high-school';
+    const learningStyle = req.body.learningStyle || 'visual';
 
     if (!topic) {
       console.log("Error: No topic provided");
@@ -273,7 +286,12 @@ app.post("/userQuestionQuiz", async (req, res) => {
       return res.status(500).json({ error: "GROQ_API_KEY not configured" });
     }
 
+    console.log(`User settings - Education: ${educationLevel}, Learning Style: ${learningStyle}`);
+
     const quizSystemPrompt = `You are a quiz generator. Generate exactly 5 multiple choice questions on the given topic.
+User Education Level: ${educationLevel}
+User Learning Style: ${learningStyle}
+
 Return ONLY valid JSON (no markdown, no code blocks, no extra text) in this exact format:
 [
   {
@@ -290,6 +308,8 @@ Important rules:
 - correctAnswer must exactly match one of the options (including the letter prefix)
 - Keep questions clear and educational
 - Provide helpful explanations
+- Tailor difficulty and style to the user's education level (${educationLevel})
+- Adapt question format to their learning style (${learningStyle})
 - For each question have a very easy question, 2 easy questions 1 medium question and 1 hard question`;
 
     const quizPrompt = `Generate a quiz on the topic: "${topic}"`;

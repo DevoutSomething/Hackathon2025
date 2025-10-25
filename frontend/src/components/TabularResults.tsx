@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useUserSettings } from "../contexts/UserSettingsContext";
 import TextResult from "./TextResult";
 import "../../styles/TabularResults.css";
 import QuizForm from "./QuizForm";
@@ -18,7 +19,23 @@ interface TabularResultsProps {
 type TabType = "text" | "video" | "quiz";
 
 export default function TabularResults({ apiResponse, type = "text" }: TabularResultsProps) {
-  const [activeTab, setActiveTab] = useState<TabType>(type);
+  const { settings } = useUserSettings();
+  
+  // Determine initial tab based on learning style
+  const getInitialTab = (learningStyle: string): TabType => {
+    switch (learningStyle) {
+      case 'visual':
+        return 'video';
+      case 'kinesthetic':
+        return 'quiz';
+      case 'auditory':
+      case 'reading-writing':
+      default:
+        return 'text';
+    }
+  };
+  
+  const [activeTab, setActiveTab] = useState<TabType>(type === "text" ? getInitialTab(settings.learningStyle) : type);
 
   // Extract prompt for display
   const prompt = typeof apiResponse === "string" 
@@ -39,6 +56,13 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
   const isMounted = useRef<boolean>(true);
 
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  
+  // Update tab when learning style changes
+  useEffect(() => {
+    if (type === "text") {
+      setActiveTab(getInitialTab(settings.learningStyle));
+    }
+  }, [settings.learningStyle, type]);
   
   // Extract the actual prompt content (remove first and last lines if they're formatting)
   const lines = prompt.split('\n');
@@ -63,7 +87,11 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
       const response = await fetch(`${apiUrl}/userQuestionQuiz`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: enhancedPrompt }),
+        body: JSON.stringify({ 
+          topic: enhancedPrompt,
+          educationLevel: settings.educationLevel,
+          learningStyle: settings.learningStyle
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
