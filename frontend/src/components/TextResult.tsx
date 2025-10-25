@@ -11,11 +11,11 @@ export default function TextResult() {
   const location = useLocation();
   const apiResponse = location.state?.apiResponse as ApiResponse | string;
 
-  if (typeof apiResponse === 'string') {
+  if (typeof apiResponse === "string") {
     return (
       <div>
         <h2>Response:</h2>
-        <p>{apiResponse}</p>
+        <p>{"$$" + apiResponse + "$$"}</p>
       </div>
     );
   }
@@ -25,13 +25,13 @@ export default function TextResult() {
     <div>
       <h2>Your Question:</h2>
       <p>{apiResponse?.promptReceived}</p>
-      
+
       <h2>Claude's Response:</h2>
       <LatexText text={apiResponse?.response} />
-      <br/>
-      <LatexText text="Inline example: $E = mc^2$ and more text"/>
-      <br/>
-      <LatexText text="$$\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$"/>
+      <br />
+      <LatexText text="Inline example: $E = mc^2$ and more text" />
+      <br />
+      <LatexText text="$$\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$" />
     </div>
   );
 }
