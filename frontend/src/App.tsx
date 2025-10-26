@@ -6,20 +6,39 @@ import Result from "./pages/Result.tsx";
 import Landing from "./pages/Landing.tsx";
 import Video from "./pages/Video.tsx";
 import Header from "./components/Header";
+import Whiteboard from "./components/Whiteboard";
 import { UserSettingsProvider } from "./contexts/UserSettingsContext";
 
 function App() {
   return (
     <UserSettingsProvider>
-      <div>
-        <Header />
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/learn" element={<Learn />} />
-          <Route path="/result" element={<Result />} />
-          <Route path="/video" element={<Video />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/whiteboard" element={<Whiteboard />} />
+        <Route path="/" element={
+          <>
+            <Header />
+            <Landing />
+          </>
+        } />
+        <Route path="/learn" element={
+          <>
+            <Header />
+            <Learn />
+          </>
+        } />
+        <Route path="/result" element={
+          <>
+            <Header />
+            <Result />
+          </>
+        } />
+        <Route path="/video" element={
+          <>
+            <Header />
+            <Video />
+          </>
+        } />
+      </Routes>
     </UserSettingsProvider>
   );
 }
