@@ -796,9 +796,17 @@ For the drawData elements:
 - text: use x, y, text, fontSize
 - All elements can have a color property (hex color string)
 
+IMPORTANT DRAWING GUIDELINES:
+- Use dark colors for visibility: #000000, #2c3e50, #34495e, #e74c3c, #3498db, #2ecc71
+- Avoid white (#ffffff) or very light colors for text - use black or dark colors instead
+- For BST/tree nodes: use ellipses with solid fill colors like #3498db
+- Position elements with adequate spacing (50-100px between nodes)
+- Use consistent sizing: nodes 40-60px diameter, text 16-24px font size
+- For complex diagrams, start from coordinates like x:200, y:100 to ensure visibility
+
 The student's question is: "${question}"
 
-Generate helpful drawing elements that illustrate the concept. For example, if explaining a circle's properties, draw the center point, radius lines, diameter, and labels.`,
+Generate helpful drawing elements that illustrate the concept. Create clear, well-spaced diagrams with good contrast.`,
               },
               {
                 type: "image",
@@ -841,7 +849,17 @@ Generate helpful drawing elements that illustrate the concept. For example, if e
     // Try to parse the response as JSON to get drawing instructions
     let parsedResponse;
     try {
-      parsedResponse = JSON.parse(text);
+      // Handle JSON wrapped in markdown code blocks
+      let jsonText = text;
+      if (text.includes('```json')) {
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          jsonText = jsonMatch[1];
+          console.log("Extracted JSON from markdown code block");
+        }
+      }
+      
+      parsedResponse = JSON.parse(jsonText);
       console.log("Successfully parsed JSON response with drawData");
       
       // Send both explanation and drawing data
@@ -850,7 +868,7 @@ Generate helpful drawing elements that illustrate the concept. For example, if e
         drawData: parsedResponse.drawData || null
       });
     } catch (parseError) {
-      console.log("Response is not JSON, sending as plain text");
+      console.log("Response is not JSON, sending as plain text:", parseError.message);
       // If it's not JSON, just send the text response
       res.json({ response: text });
     }

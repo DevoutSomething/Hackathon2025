@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import "./Whiteboard.css";
@@ -10,6 +10,14 @@ const Whiteboard: React.FC = () => {
   const [aiResponse, setAiResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Prevent panel from closing when user is actively typing
+  useEffect(() => {
+    if (question.trim() && !showAiPanel) {
+      setShowAiPanel(true);
+    }
+  }, [question, showAiPanel]);
 
   // Convert Blob → Base64 helper
   const blobToBase64 = (blob: Blob): Promise<string> =>
@@ -98,12 +106,16 @@ const Whiteboard: React.FC = () => {
   const drawAIElements = (aiElements: any[]) => {
     if (!excalidrawRef.current) return;
     
+    console.log(`Starting to draw ${aiElements.length} AI elements`);
+    
     try {
       // Get current elements
       const currentElements = excalidrawRef.current.getSceneElements();
+      console.log(`Current canvas has ${currentElements.length} elements`);
       
       // Convert AI instructions to Excalidraw elements
       const newElements = aiElements.map((elem, index) => {
+        console.log(`Processing element ${index}:`, elem);
         const baseElement = {
           id: `ai-${Date.now()}-${index}`,
           strokeColor: elem.color || "#000000",
@@ -145,6 +157,8 @@ const Whiteboard: React.FC = () => {
               height: elem.height || 50,
               angle: 0,
               strokeColor: elem.color || "#000000",
+              backgroundColor: elem.color || "#3498db",
+              fillStyle: "solid" as const,
             };
             
           case "diamond":
@@ -196,6 +210,12 @@ const Whiteboard: React.FC = () => {
             };
             
           case "text":
+            // Fix white text on white background issue
+            let textColor = elem.color || "#000000";
+            if (textColor === "#ffffff" || textColor === "white") {
+              textColor = "#000000"; // Change white text to black
+            }
+            
             return {
               ...baseElement,
               type: "text" as const,
@@ -212,7 +232,7 @@ const Whiteboard: React.FC = () => {
               baseline: 18,
               containerId: null,
               originalText: elem.text || "Text",
-              strokeColor: elem.color || "#000000",
+              strokeColor: textColor,
             };
             
           default:
@@ -221,14 +241,19 @@ const Whiteboard: React.FC = () => {
         }
       }).filter((elem): elem is NonNullable<typeof elem> => elem !== null);
       
+      console.log(`Created ${newElements.length} new elements before conversion`);
+      
       // Convert using Excalidraw's converter if available
       let finalElements;
       try {
         finalElements = convertToExcalidrawElements(newElements as any);
+        console.log(`Successfully converted to ${finalElements.length} Excalidraw elements`);
       } catch (e) {
-        console.log("Using raw elements (convertToExcalidrawElements not available or failed)");
+        console.log("Using raw elements (convertToExcalidrawElements not available or failed):", e);
         finalElements = newElements;
       }
+      
+      console.log("Final elements to be added:", finalElements);
       
       // Update the scene with combined elements
       excalidrawRef.current.updateScene({
@@ -245,11 +270,20 @@ const Whiteboard: React.FC = () => {
     excalidrawRef.current?.resetScene();
   };
 
+  const handleToggleAiPanel = () => {
+    // If user has typed something, warn before closing
+    if (showAiPanel && question.trim()) {
+      const shouldClose = window.confirm("You have text in the AI prompt. Are you sure you want to close the panel?");
+      if (!shouldClose) return;
+    }
+    setShowAiPanel(!showAiPanel);
+  };
+
   return (
     <div className="whiteboard-container">
       <button
         className="ai-panel-toggle"
-        onClick={() => setShowAiPanel(!showAiPanel)}
+        onClick={handleToggleAiPanel}
       >
         {showAiPanel ? "Hide AI Assistant" : "Show AI Assistant"}
       </button>
@@ -258,11 +292,16 @@ const Whiteboard: React.FC = () => {
         <div className="ai-panel">
           <h3>AI Assistant</h3>
           <textarea
+            ref={textareaRef}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask about your drawing..."
             rows={3}
             disabled={isLoading}
+            onFocus={() => {
+              // Ensure the panel stays open when focusing on textarea
+              if (!showAiPanel) setShowAiPanel(true);
+            }}
           />
           <button
             onClick={handleAskAI}
