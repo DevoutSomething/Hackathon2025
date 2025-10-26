@@ -427,6 +427,7 @@ Requirements:
 - Use simple text strings instead of LaTeX expressions
 - For equations, use plain text like "x^2 + y^2 = r^2" instead of LaTeX syntax
 - DO NOT use Latex syntax DO NOT use libraries besides Manim.
+- IMPORTANT: Only use these safe colors: RED, BLUE, GREEN, YELLOW, WHITE, BLACK, GRAY, ORANGE, PURPLE, PINK. Do NOT use CYAN or other color constants that may not be available.
 -Make the animations concistant and easy to follow. Create graphs or visual disagrams that go along with the equations. 
 -Make these videos professional and similar to ThreeBlueOneBrown. 
 -NEVER have  compile_tex    
@@ -566,6 +567,8 @@ app.post("/executeManim", upload.single('script'), async (req, res) => {
     let wrappedScript = scriptContent;
     if (!scriptContent.includes('from manim import')) {
       wrappedScript = `from manim import *
+from manim import RED, BLUE, GREEN, YELLOW, WHITE, BLACK, GRAY, ORANGE, PURPLE, PINK
+
 ${scriptContent}`;
     }
     
@@ -761,17 +764,41 @@ app.post("/userQuestionVision", async (req, res) => {
                 type: "text",
                 text: `You are an educational AI assistant analyzing a student's whiteboard drawing. 
 Your task is to:
-1. Identify and describe what you see in the drawing (shapes, diagrams, equations, pseudocode, graphs, code snippets, etc.)
-2. Interpret the educational context and the concept being illustrated (e.g., data structures, algorithms, calculus, geometry, etc.)
-3. Provide a clear, step-by-step explanation that addresses the student's question or what they might be trying to understand
-4. If there are logical, mathematical, or structural errors in the drawing, gently correct them and explain why
-5. Suggest improvements or additional diagrams, annotations, or examples that could help the student grasp the topic better
+1. Identify and describe what you see in the drawing
+2. Interpret the educational context and concept being illustrated
+3. Provide a clear explanation that addresses the student's question
+4. Generate drawing instructions to help illustrate the concept
 
+IMPORTANT: Your response must be in this exact JSON format:
+{
+  "explanation": "Your educational explanation here...",
+  "drawData": {
+    "elements": [
+      {
+        "type": "rectangle|ellipse|diamond|arrow|line|text",
+        "x": 100,
+        "y": 100,
+        "width": 100,
+        "height": 50,
+        "color": "#000000",
+        "text": "for text elements only",
+        "fontSize": 20,
+        "x2": 200,
+        "y2": 200
+      }
+    ]
+  }
+}
 
+For the drawData elements:
+- rectangle, ellipse, diamond: use x, y, width, height
+- arrow, line: use x, y, x2, y2 (start and end points)
+- text: use x, y, text, fontSize
+- All elements can have a color property (hex color string)
 
 The student's question is: "${question}"
 
-Please provide a thorough but concise educational response that helps the student understand the concept better. Use simple language and relate to what's actually drawn on the whiteboard.`,
+Generate helpful drawing elements that illustrate the concept. For example, if explaining a circle's properties, draw the center point, radius lines, diameter, and labels.`,
               },
               {
                 type: "image",
@@ -810,7 +837,23 @@ Please provide a thorough but concise educational response that helps the studen
     }
     
     console.log("Extracted text response length:", text.length);
-    res.json({ response: text });
+    
+    // Try to parse the response as JSON to get drawing instructions
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(text);
+      console.log("Successfully parsed JSON response with drawData");
+      
+      // Send both explanation and drawing data
+      res.json({ 
+        response: parsedResponse.explanation || text,
+        drawData: parsedResponse.drawData || null
+      });
+    } catch (parseError) {
+      console.log("Response is not JSON, sending as plain text");
+      // If it's not JSON, just send the text response
+      res.json({ response: text });
+    }
   } catch (error) {
     console.error("Vision AI error:", error);
     res.status(500).json({ 

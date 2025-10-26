@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Excalidraw } from "@excalidraw/excalidraw";
+import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import "./Whiteboard.css";
 
@@ -80,6 +80,12 @@ const Whiteboard: React.FC = () => {
       }
       
       setAiResponse(data.response || "No response received.");
+      
+      // Handle AI drawing instructions if present
+      if (data.drawData?.elements && Array.isArray(data.drawData.elements)) {
+        console.log("Processing AI drawing instructions:", data.drawData.elements);
+        drawAIElements(data.drawData.elements);
+      }
     } catch (err) {
       console.error("Error calling AI:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -89,6 +95,152 @@ const Whiteboard: React.FC = () => {
     }
   };
 
+  const drawAIElements = (aiElements: any[]) => {
+    if (!excalidrawRef.current) return;
+    
+    try {
+      // Get current elements
+      const currentElements = excalidrawRef.current.getSceneElements();
+      
+      // Convert AI instructions to Excalidraw elements
+      const newElements = aiElements.map((elem, index) => {
+        const baseElement = {
+          id: `ai-${Date.now()}-${index}`,
+          strokeColor: elem.color || "#000000",
+          backgroundColor: "transparent",
+          fillStyle: "solid" as const,
+          strokeWidth: 2,
+          strokeStyle: "solid" as const,
+          roughness: 1,
+          opacity: 100,
+          seed: Math.floor(Math.random() * 100000),
+          versionNonce: Math.floor(Math.random() * 100000),
+          isDeleted: false,
+          boundElements: null,
+          updated: Date.now(),
+          link: null,
+          locked: false,
+        };
+        
+        switch (elem.type) {
+          case "rectangle":
+            return {
+              ...baseElement,
+              type: "rectangle" as const,
+              x: elem.x || 100,
+              y: elem.y || 100,
+              width: elem.width || 100,
+              height: elem.height || 50,
+              angle: 0,
+              strokeColor: elem.color || "#000000",
+            };
+            
+          case "ellipse":
+            return {
+              ...baseElement,
+              type: "ellipse" as const,
+              x: elem.x || 100,
+              y: elem.y || 100,
+              width: elem.width || 100,
+              height: elem.height || 50,
+              angle: 0,
+              strokeColor: elem.color || "#000000",
+            };
+            
+          case "diamond":
+            return {
+              ...baseElement,
+              type: "diamond" as const,
+              x: elem.x || 100,
+              y: elem.y || 100,
+              width: elem.width || 100,
+              height: elem.height || 50,
+              angle: 0,
+              strokeColor: elem.color || "#000000",
+            };
+            
+          case "arrow":
+            return {
+              ...baseElement,
+              type: "arrow" as const,
+              x: elem.x || 100,
+              y: elem.y || 100,
+              width: (elem.x2 || 200) - (elem.x || 100),
+              height: (elem.y2 || 200) - (elem.y || 100),
+              angle: 0,
+              points: [[0, 0], [(elem.x2 || 200) - (elem.x || 100), (elem.y2 || 200) - (elem.y || 100)]],
+              lastCommittedPoint: null,
+              startBinding: null,
+              endBinding: null,
+              startArrowhead: null,
+              endArrowhead: "arrow" as const,
+              strokeColor: elem.color || "#000000",
+            };
+            
+          case "line":
+            return {
+              ...baseElement,
+              type: "line" as const,
+              x: elem.x || 100,
+              y: elem.y || 100,
+              width: (elem.x2 || 200) - (elem.x || 100),
+              height: (elem.y2 || 200) - (elem.y || 100),
+              angle: 0,
+              points: [[0, 0], [(elem.x2 || 200) - (elem.x || 100), (elem.y2 || 200) - (elem.y || 100)]],
+              lastCommittedPoint: null,
+              startBinding: null,
+              endBinding: null,
+              startArrowhead: null,
+              endArrowhead: null,
+              strokeColor: elem.color || "#000000",
+            };
+            
+          case "text":
+            return {
+              ...baseElement,
+              type: "text" as const,
+              x: elem.x || 100,
+              y: elem.y || 100,
+              width: elem.text ? elem.text.length * 10 : 100,
+              height: 25,
+              angle: 0,
+              text: elem.text || "Text",
+              fontSize: elem.fontSize || 20,
+              fontFamily: 1,
+              textAlign: "left" as const,
+              verticalAlign: "top" as const,
+              baseline: 18,
+              containerId: null,
+              originalText: elem.text || "Text",
+              strokeColor: elem.color || "#000000",
+            };
+            
+          default:
+            console.warn(`Unknown element type: ${elem.type}`);
+            return null;
+        }
+      }).filter((elem): elem is NonNullable<typeof elem> => elem !== null);
+      
+      // Convert using Excalidraw's converter if available
+      let finalElements;
+      try {
+        finalElements = convertToExcalidrawElements(newElements as any);
+      } catch (e) {
+        console.log("Using raw elements (convertToExcalidrawElements not available or failed)");
+        finalElements = newElements;
+      }
+      
+      // Update the scene with combined elements
+      excalidrawRef.current.updateScene({
+        elements: [...currentElements, ...finalElements],
+      });
+      
+      console.log(`Added ${finalElements.length} AI-generated elements to the canvas`);
+    } catch (error) {
+      console.error("Error drawing AI elements:", error);
+    }
+  };
+  
   const handleClearWhiteboard = () => {
     excalidrawRef.current?.resetScene();
   };
