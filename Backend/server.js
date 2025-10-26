@@ -13,9 +13,9 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware with increased limit for base64 images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
@@ -717,6 +717,110 @@ ${scriptContent}`;
   }
 });
 
+app.post("/userQuestionVision", async (req, res) => {
+  const { image, question } = req.body;
+
+  console.log("=== /userQuestionVision endpoint called ===");
+  console.log("Question received:", question);
+  console.log("Image data received:", image ? "Yes" : "No");
+  
+  if (image) {
+    console.log("Image base64 length:", image.length);
+    console.log("Image base64 preview:", image.substring(0, 50) + "...");
+  }
+
+  if (!image) {
+    return res.status(400).json({ error: "No image data provided" });
+  }
+
+  if (!question) {
+    return res.status(400).json({ error: "No question provided" });
+  }
+  
+  if (!process.env.CLAUDE_API_KEY) {
+    console.error("CLAUDE_API_KEY not found in environment variables");
+    return res.status(500).json({ error: "Claude API key not configured" });
+  }
+
+  try {
+    const result = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5",
+        max_tokens: 2048,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `You are an educational AI assistant analyzing a student's whiteboard drawing. 
+Your task is to:
+1. Identify and describe what you see in the drawing (shapes, diagrams, equations, pseudocode, graphs, code snippets, etc.)
+2. Interpret the educational context and the concept being illustrated (e.g., data structures, algorithms, calculus, geometry, etc.)
+3. Provide a clear, step-by-step explanation that addresses the student's question or what they might be trying to understand
+4. If there are logical, mathematical, or structural errors in the drawing, gently correct them and explain why
+5. Suggest improvements or additional diagrams, annotations, or examples that could help the student grasp the topic better
+
+
+
+The student's question is: "${question}"
+
+Please provide a thorough but concise educational response that helps the student understand the concept better. Use simple language and relate to what's actually drawn on the whiteboard.`,
+              },
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: image,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!result.ok) {
+      const errorData = await result.text();
+      console.error("Claude API error response:", errorData);
+      throw new Error(`Claude API returned ${result.status}: ${errorData}`);
+    }
+
+    const data = await result.json();
+    console.log("Claude Vision API response received:", JSON.stringify(data, null, 2));
+    
+    // Check if we have a valid response structure
+    if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
+      console.error("Unexpected response structure:", data);
+      throw new Error("Invalid response structure from Claude API");
+    }
+    
+    const text = data.content[0]?.text;
+    
+    if (!text) {
+      console.error("No text in response:", data.content[0]);
+      throw new Error("No text content in Claude response");
+    }
+    
+    console.log("Extracted text response length:", text.length);
+    res.json({ response: text });
+  } catch (error) {
+    console.error("Vision AI error:", error);
+    res.status(500).json({ 
+      error: "Failed to interpret whiteboard",
+      details: error.message 
+    });
+  }
+});
+
+
 // Test endpoint to check if Manim is working
 app.get("/test-manim", (req, res) => {
   const testScript = `from manim import *
@@ -750,6 +854,61 @@ class TestVideo(Scene):
       });
     }
   });
+});
+
+// Test endpoint for Claude vision API
+app.post("/test-vision", async (req, res) => {
+  console.log("=== /test-vision endpoint called ===");
+  
+  try {
+    // Create a simple test image (1x1 red pixel)
+    const testImage = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+    
+    const result = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5",
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "What color is this image?",
+              },
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: testImage,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!result.ok) {
+      const errorData = await result.text();
+      console.error("Claude API error:", errorData);
+      return res.status(500).json({ error: errorData });
+    }
+
+    const data = await result.json();
+    console.log("Test vision response:", data);
+    res.json({ success: true, response: data });
+  } catch (error) {
+    console.error("Test vision error:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.listen(PORT, () => {
