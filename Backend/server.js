@@ -164,7 +164,7 @@ When responding:
           content: userPrompt,
         },
       ],
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: "llama-3.3-70b-versatile",
       temperature: 1,
       max_completion_tokens: 8192,
       top_p: 1,
@@ -195,7 +195,7 @@ async function callGroqAPIWithSystem(userPrompt, systemPrompt) {
           content: userPrompt,
         },
       ],
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: "llama-3.3-70b-versatile",
       temperature: 1,
       max_completion_tokens: 8192,
       top_p: 1,
@@ -426,7 +426,9 @@ Requirements:
 - Avoid mathematical symbols that require LaTeX compilation
 - Use simple text strings instead of LaTeX expressions
 - For equations, use plain text like "x^2 + y^2 = r^2" instead of LaTeX syntax
-- DO NOT use Latex syntax DO NOT use libraries besides Manim. 
+- DO NOT use Latex syntax DO NOT use libraries besides Manim.
+-Make the animations concistant and easy to follow. Create graphs or visual disagrams that go along with the equations. 
+-Make these videos professional and similar to ThreeBlueOneBrown. 
 -NEVER have  compile_tex    
  from manim import *
 class create_video(Scene):

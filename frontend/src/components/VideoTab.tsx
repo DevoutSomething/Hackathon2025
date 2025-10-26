@@ -16,24 +16,58 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
   const [error, setError] = useState<string | null>(null);
   const [pythonScript, setPythonScript] = useState<string | null>(null);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const generationInProgress = useRef(false);
   const currentTopic = useRef<string | null>(null);
   const hasGeneratedVideo = useRef(false);
+  
+  // Global video state that persists across component mounts
+  const globalVideoState = useRef<Map<string, { 
+    isReady: boolean; 
+    videoUrl: string | null; 
+    isGenerating: boolean;
+    pythonScript: string | null;
+  }>>(new Map());
   
   console.log(pythonScript)
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
-    if (topic && topic !== currentTopic.current) {
-      currentTopic.current = topic;
-      hasGeneratedVideo.current = false;
-      setIsVideoReady(false);
+    if (!topic) return;
+    
+    currentTopic.current = topic;
+    const videoState = globalVideoState.current.get(topic);
+    
+    console.log('Checking video state for topic:', topic, videoState);
+    
+    if (videoState) {
+      if (videoState.isReady && videoState.videoUrl) {
+        // Video is ready, load it immediately
+        console.log('Loading existing video for topic:', topic);
+        setVideoUrl(videoState.videoUrl);
+        setPythonScript(videoState.pythonScript);
+        setIsVideoReady(true);
+        setIsGenerating(false);
+        setIsLoading(false);
+        setError(null);
+        hasGeneratedVideo.current = true;
+        return;
+      } else if (videoState.isGenerating) {
+        // Video is being generated in background
+        console.log('Video is being generated in background for topic:', topic);
+        setIsGenerating(true);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
     }
     
-    if (topic && !hasGeneratedVideo.current && !generationInProgress.current) {
-      hasGeneratedVideo.current = true;
-      generateVideo();
-    }
+    // No video exists or is being generated, start new generation
+    console.log('Starting new video generation for topic:', topic);
+    hasGeneratedVideo.current = false;
+    setIsVideoReady(false);
+    setIsGenerating(false);
+    generateVideo();
   }, [topic]);
 
   const generateVideo = async () => {
@@ -44,10 +78,19 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
     
     generationInProgress.current = true;
     setIsLoading(true);
+    setIsGenerating(true);
     setError(null);
     setVideoUrl(null);
     setPythonScript(null);
     setIsVideoReady(false);
+
+    // Mark this topic as being generated
+    globalVideoState.current.set(topic, { 
+      isReady: false, 
+      videoUrl: null, 
+      isGenerating: true,
+      pythonScript: null
+    });
 
     try {
       // Step 1: Call the createVideo endpoint to get Python script
@@ -107,8 +150,17 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
           ? result.videoUrl 
           : `${apiUrl}${result.videoUrl}`;
         
+        // Store the video in our global state
+        globalVideoState.current.set(topic, { 
+          isReady: true, 
+          videoUrl: fullVideoUrl, 
+          isGenerating: false,
+          pythonScript: script
+        });
+        
         setVideoUrl(fullVideoUrl);
         setIsVideoReady(true); // Only show video when completely ready
+        setIsGenerating(false);
         setError(null); // Clear any previous errors
       } else {
         throw new Error(result.error || 'Failed to generate video');
@@ -117,12 +169,19 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
     } catch (err) {
       console.error('Error executing Manim script:', err);
       setError(err instanceof Error ? err.message : 'Failed to execute Python script');
+      setIsGenerating(false);
+      // Clear generation state on error
+      globalVideoState.current.delete(topic);
     }
   };
 
   const handleRegenerate = () => {
+    // Clear generation status for this topic
+    globalVideoState.current.delete(topic);
     hasGeneratedVideo.current = false;
     setIsVideoReady(false);
+    setIsGenerating(false);
+    setError(null);
     generateVideo();
   };
 
@@ -142,6 +201,14 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
             <div className="step">2. Executing with Manim</div>
             <div className="step">3. Rendering video</div>
           </div>
+        </div>
+      )}
+
+      {isGenerating && !isLoading && (
+        <div className="generating-container">
+          <div className="loading-spinner"></div>
+          <p>Video is being generated in the background...</p>
+          <p className="background-note">You can navigate away and return later. The video will be ready when you come back.</p>
         </div>
       )}
 

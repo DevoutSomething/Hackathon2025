@@ -94,6 +94,25 @@
   background: #c82333;
 }
 
+.generating-container {
+  text-align: center;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.generating-container .loading-spinner {
+  margin: 0 auto 1rem;
+}
+
+.background-note {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
 .video-container {
   margin: 2rem 0;
   text-align: center;
