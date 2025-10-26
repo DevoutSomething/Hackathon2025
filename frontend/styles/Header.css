@@ -1,20 +1,15 @@
 /* Modern Notion-Inspired Header Design */
 .landing-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  /* Not fixed: keep header in normal document flow so it scrolls with the page */
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  z-index: 1000;
-  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0); /* remove strong shadow when not fixed */
+  transition: all 0.18s ease;
 }
 
 /* Clean Logo Design */

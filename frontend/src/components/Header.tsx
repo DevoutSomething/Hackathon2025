@@ -19,12 +19,7 @@ export default function Header() {
         >
           Learn
         </Link>
-        <Link 
-          to="/video" 
-          className={`nav-link ${location.pathname === '/video' ? 'active' : ''}`}
-        >
-          Video
-        </Link>
+      
         <a href="#features" className="nav-link">Features</a>
         <a href="#about" className="nav-link">About</a>
         <SignInButton className="login-btn" />
