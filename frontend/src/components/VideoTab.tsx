@@ -10,6 +10,14 @@ interface VideoTabProps {
   topic?: string;
 }
 
+interface VideoState {
+  isReady: boolean;
+  videoUrl: string | null;
+  isGenerating: boolean;
+  pythonScript: string | null;
+  timestamp?: number;
+}
+
 const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -21,22 +29,43 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
   const currentTopic = useRef<string | null>(null);
   const hasGeneratedVideo = useRef(false);
   
-  // Global video state that persists across component mounts
-  const globalVideoState = useRef<Map<string, { 
-    isReady: boolean; 
-    videoUrl: string | null; 
-    isGenerating: boolean;
-    pythonScript: string | null;
-  }>>(new Map());
-  
-  console.log(pythonScript)
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  // Storage key for session persistence
+  const getStorageKey = (topic: string) => `video_state_${topic}`;
+
+  // Load video state from sessionStorage
+  const loadVideoState = (topic: string): VideoState | null => {
+    try {
+      const stored = sessionStorage.getItem(getStorageKey(topic));
+      if (stored) {
+        const state: VideoState = JSON.parse(stored);
+        // Check if the video is still valid (less than 24 hours old)
+        if (state.timestamp && Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
+          return state;
+        }
+      }
+    } catch (e) {
+      console.error('Error loading video state:', e);
+    }
+    return null;
+  };
+
+  // Save video state to sessionStorage
+  const saveVideoState = (topic: string, state: VideoState) => {
+    try {
+      const stateWithTimestamp = { ...state, timestamp: Date.now() };
+      sessionStorage.setItem(getStorageKey(topic), JSON.stringify(stateWithTimestamp));
+    } catch (e) {
+      console.error('Error saving video state:', e);
+    }
+  };
 
   useEffect(() => {
     if (!topic) return;
     
     currentTopic.current = topic;
-    const videoState = globalVideoState.current.get(topic);
+    const videoState = loadVideoState(topic);
     
     console.log('Checking video state for topic:', topic, videoState);
     
@@ -53,16 +82,17 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
         hasGeneratedVideo.current = true;
         return;
       } else if (videoState.isGenerating) {
-        // Video is being generated in background
-        console.log('Video is being generated in background for topic:', topic);
+        // Video is being generated in background - start checking status
+        console.log('Video was being generated in background for topic:', topic);
         setIsGenerating(true);
-        setIsLoading(false);
-        setError(null);
+        setIsLoading(true);
+        // Start generation process
+        generateVideo();
         return;
       }
     }
     
-    // No video exists or is being generated, start new generation
+    // No video exists, start new generation immediately
     console.log('Starting new video generation for topic:', topic);
     hasGeneratedVideo.current = false;
     setIsVideoReady(false);
@@ -71,7 +101,7 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
   }, [topic]);
 
   const generateVideo = async () => {
-    // Prevent multiple simultaneous generations
+    // Prevent multiple simultaneous generations for the same topic
     if (generationInProgress.current) {
       return;
     }
@@ -85,7 +115,7 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
     setIsVideoReady(false);
 
     // Mark this topic as being generated
-    globalVideoState.current.set(topic, { 
+    saveVideoState(topic, { 
       isReady: false, 
       videoUrl: null, 
       isGenerating: true,
@@ -111,18 +141,27 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
       if (!data.success) {
         throw new Error('Failed to generate video script');
       }
-        let lines = data.response.split('\n');     
-        let middleLines = lines.slice(1, -1);
-        let result = middleLines
-          .filter(line => line.trim() !== '')
-          .filter(line => !line.trim().startsWith('```')) 
-          .join('\n');
+      
+      let lines = data.response.split('\n');     
+      let middleLines = lines.slice(1, -1);
+      let result = middleLines
+        .filter(line => line.trim() !== '') 
+        .filter(line => !line.trim().startsWith('```')) 
+        .join('\n');
+      
       setPythonScript(result);
       await executeManimScript(result);
 
     } catch (err) {
       console.error('Error generating video:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+      // Clear generation state on error
+      saveVideoState(topic, { 
+        isReady: false, 
+        videoUrl: null, 
+        isGenerating: false,
+        pythonScript: null
+      });
     } finally {
       setIsLoading(false);
       generationInProgress.current = false;
@@ -150,18 +189,20 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
           ? result.videoUrl 
           : `${apiUrl}${result.videoUrl}`;
         
-        // Store the video in our global state
-        globalVideoState.current.set(topic, { 
+        // Store the video in sessionStorage
+        const finalState: VideoState = { 
           isReady: true, 
           videoUrl: fullVideoUrl, 
           isGenerating: false,
           pythonScript: script
-        });
+        };
+        saveVideoState(topic, finalState);
         
         setVideoUrl(fullVideoUrl);
-        setIsVideoReady(true); // Only show video when completely ready
+        setIsVideoReady(true);
         setIsGenerating(false);
-        setError(null); // Clear any previous errors
+        setError(null);
+        hasGeneratedVideo.current = true;
       } else {
         throw new Error(result.error || 'Failed to generate video');
       }
@@ -171,16 +212,22 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
       setError(err instanceof Error ? err.message : 'Failed to execute Python script');
       setIsGenerating(false);
       // Clear generation state on error
-      globalVideoState.current.delete(topic);
+      saveVideoState(topic, { 
+        isReady: false, 
+        videoUrl: null, 
+        isGenerating: false,
+        pythonScript: null
+      });
     }
   };
 
   const handleRegenerate = () => {
-    // Clear generation status for this topic
-    globalVideoState.current.delete(topic);
+    // Clear stored state for this topic
+    sessionStorage.removeItem(getStorageKey(topic));
     hasGeneratedVideo.current = false;
     setIsVideoReady(false);
     setIsGenerating(false);
+    setIsLoading(true);
     setError(null);
     generateVideo();
   };

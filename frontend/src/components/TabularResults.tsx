@@ -171,6 +171,13 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
           />
         ) : null}
       </div>
+      
+      {/* Render VideoTab in background when not active to keep generation running */}
+      {activeTab !== "video" && (
+        <div style={{ display: 'none' }}>
+          <VideoTab topic={promptForVideo} />
+        </div>
+      )}
     </div>
   );
 }
