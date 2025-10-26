@@ -575,10 +575,18 @@ ${scriptContent}`;
     console.log(`Executing command: ${manimCommand}`);
     console.log(`Script content preview:`, wrappedScript.substring(0, 300));
     
+    // Get ffmpeg path from ffmpeg-static
+    const ffmpegPath = require('ffmpeg-static');
+    
     exec(manimCommand, { 
       timeout: 20000, // 20 second timeout
       cwd: scriptsDir, // Run from scripts directory
-      env: { ...process.env, PYTHONPATH: process.env.PYTHONPATH || '' }
+      env: { 
+        ...process.env, 
+        PYTHONPATH: process.env.PYTHONPATH || '',
+        // Set ffmpeg path for pydub
+        FFMPEG_BINARY: ffmpegPath
+      }
     }, (error, stdout, stderr) => {
       console.log("Manim stdout:", stdout);
       console.log("Manim stderr:", stderr);

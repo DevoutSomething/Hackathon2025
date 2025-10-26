@@ -20,51 +20,19 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
   const currentTopic = useRef<string | null>(null);
   const hasGeneratedVideo = useRef(false);
   
-  // Video cache - stores generated videos by topic
-  const videoCache = useRef<Map<string, { videoUrl: string; pythonScript: string }>>(new Map());
-  
   console.log(pythonScript)
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
-    console.log('useEffect triggered for topic:', topic);
-    console.log('Current cache keys:', Array.from(videoCache.current.keys()));
-    console.log('hasGeneratedVideo:', hasGeneratedVideo.current);
-    console.log('generationInProgress:', generationInProgress.current);
-    
     if (topic && topic !== currentTopic.current) {
       currentTopic.current = topic;
-      
-      // Check if we have a cached video for this topic
-      const cachedVideo = videoCache.current.get(topic);
-      console.log('Cached video for topic:', topic, cachedVideo);
-      
-      if (cachedVideo) {
-        console.log('Loading cached video for topic:', topic);
-        setVideoUrl(cachedVideo.videoUrl);
-        setPythonScript(cachedVideo.pythonScript);
-        setIsVideoReady(true);
-        setError(null);
-        setIsLoading(false);
-        hasGeneratedVideo.current = true;
-        return; // Exit early - don't generate new video
-      }
-      
-      // No cached video, reset flags for new generation
       hasGeneratedVideo.current = false;
       setIsVideoReady(false);
     }
     
-    // Only generate if no cached video exists and not already generated
     if (topic && !hasGeneratedVideo.current && !generationInProgress.current) {
-      const cachedVideo = videoCache.current.get(topic);
-      if (!cachedVideo) {
-        console.log('No cached video found, generating new video for topic:', topic);
-        hasGeneratedVideo.current = true;
-        generateVideo();
-      } else {
-        console.log('Cached video exists, not generating new video');
-      }
+      hasGeneratedVideo.current = true;
+      generateVideo();
     }
   }, [topic]);
 
@@ -139,16 +107,6 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
           ? result.videoUrl 
           : `${apiUrl}${result.videoUrl}`;
         
-        // Cache the video for this topic
-        if (topic) {
-          videoCache.current.set(topic, {
-            videoUrl: fullVideoUrl,
-            pythonScript: script
-          });
-          console.log('Cached video for topic:', topic);
-          console.log('Cache now contains:', Array.from(videoCache.current.keys()));
-        }
-        
         setVideoUrl(fullVideoUrl);
         setIsVideoReady(true); // Only show video when completely ready
         setError(null); // Clear any previous errors
@@ -163,11 +121,6 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
   };
 
   const handleRegenerate = () => {
-    // Clear cache for current topic to force regeneration
-    if (topic) {
-      videoCache.current.delete(topic);
-      console.log('Cleared cache for topic:', topic);
-    }
     hasGeneratedVideo.current = false;
     setIsVideoReady(false);
     generateVideo();
