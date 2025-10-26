@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, type ReactNode } from 'react';
 
 interface UserSettings {
   educationLevel: string;
   learningStyle: string;
+  complexity: number; // 0-4 scale for animation complexity
 }
 
 interface UserSettingsContextType {
@@ -27,7 +28,8 @@ interface UserSettingsProviderProps {
 export const UserSettingsProvider: React.FC<UserSettingsProviderProps> = ({ children }) => {
   const [settings, setSettings] = useState<UserSettings>({
     educationLevel: 'high-school',
-    learningStyle: 'visual'
+    learningStyle: 'visual',
+    complexity: 2 // Default medium complexity (0-4 scale)
   });
 
   const updateSettings = (newSettings: Partial<UserSettings>) => {

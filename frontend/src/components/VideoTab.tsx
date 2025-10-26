@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useUserSettings } from '../contexts/UserSettingsContext';
 import './VideoTab.css';
 
 interface VideoResponse {
@@ -20,12 +21,14 @@ interface VideoState {
 }
 
 const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", autoStart = true }) => {
+  const { settings } = useUserSettings();
   const [isLoading, setIsLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pythonScript, setPythonScript] = useState<string | null>(null);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [currentStep, setCurrentStep] = useState<string>("Preparing...");
   const generationInProgress = useRef(false);
   const currentTopic = useRef<string | null>(null);
   const hasGeneratedVideo = useRef(false);
@@ -116,6 +119,7 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", au
     setVideoUrl(null);
     setPythonScript(null);
     setIsVideoReady(false);
+    setCurrentStep("Preparing...");
 
     // Mark this topic as being generated
     saveVideoState(topic, { 
@@ -127,12 +131,16 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", au
 
     try {
       // Step 1: Call the createVideo endpoint to get Python script
+      setCurrentStep("Creating Python script...");
       const response = await fetch(`${apiUrl}/createVideo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: topic }),
+        body: JSON.stringify({ 
+          prompt: topic,
+          complexity: settings.complexity
+        }),
       });
 
       if (!response.ok) {
@@ -153,11 +161,13 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", au
         .join('\n');
       
       setPythonScript(result);
+      setCurrentStep("Rendering video with Manim...");
       await executeManimScript(result);
 
     } catch (err) {
       console.error('Error generating video:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+      setCurrentStep("Error occurred");
       // Clear generation state on error
       saveVideoState(topic, { 
         isReady: false, 
@@ -202,6 +212,7 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", au
         saveVideoState(topic, finalState);
         
         setVideoUrl(fullVideoUrl);
+        setCurrentStep("Complete!");
         setIsVideoReady(true);
         setIsGenerating(false);
         setError(null);
@@ -213,6 +224,7 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", au
     } catch (err) {
       console.error('Error executing Manim script:', err);
       setError(err instanceof Error ? err.message : 'Failed to execute Python script');
+      setCurrentStep("Error occurred");
       setIsGenerating(false);
       // Clear generation state on error
       saveVideoState(topic, { 
@@ -237,28 +249,18 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", au
 
   return (
     <div className="video-tab">
-      <div className="video-header">
-        <h2>Video Generation</h2>
-        <p>Creating an animated visualization for: <strong>{topic}</strong></p>
-      </div>
-
-      {isLoading && (
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Generating video animation...</p>
-          <div className="loading-steps">
-            <div className="step">1. Creating Python script</div>
-            <div className="step">2. Executing with Manim</div>
-            <div className="step">3. Rendering video</div>
-          </div>
+      {!(videoUrl && isVideoReady) && (
+        <div className="video-header">
+          <h2>Video Generation</h2>
+          <p>Creating an animated visualization for: <strong>{topic}</strong></p>
         </div>
       )}
 
-      {isGenerating && !isLoading && (
-        <div className="generating-container">
+      {(isLoading || isGenerating) && (
+        <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Video is being generated in the background...</p>
-          <p className="background-note">You can navigate away and return later. The video will be ready when you come back.</p>
+          <p>Generating video animation...</p>
+          <p className="current-step">{currentStep}</p>
         </div>
       )}
 
@@ -293,15 +295,6 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", au
               Generate New Video
             </button>
           </div>
-        </div>
-      )}
-
-      {pythonScript && (
-        <div className="script-container">
-          <h3>Generated Python Script</h3>
-          <pre className="python-script">
-            <code>{pythonScript}</code>
-          </pre>
         </div>
       )}
     </div>

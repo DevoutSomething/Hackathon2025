@@ -30,3 +30,10 @@ dist-ssr
 *partial
 **/partial_movie_files/**
 **/partial_movie_file_list.txt
+
+# Manim generated scripts
+**/manim_script_*.py
+backend/scripts/
+
+# Upload metadata files
+backend/uploads/

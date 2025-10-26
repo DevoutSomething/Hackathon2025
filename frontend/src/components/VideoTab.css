@@ -37,6 +37,13 @@
   margin: 0 auto 1rem;
 }
 
+.current-step {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  color: #007bff;
+  font-weight: 500;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
