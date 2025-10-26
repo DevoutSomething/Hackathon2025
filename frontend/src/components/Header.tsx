@@ -19,9 +19,10 @@ export default function Header() {
         >
           Learn
         </Link>
-      
-        <a href="#features" className="nav-link">Features</a>
-        <a href="#about" className="nav-link">About</a>
+
+        <Link className="nav-link"
+        to="/whiteboard"
+        >Whiteboard</Link>
         <SignInButton className="login-btn" />
       </nav>
     </header>

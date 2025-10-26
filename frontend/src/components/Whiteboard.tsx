@@ -12,7 +12,6 @@ const Whiteboard: React.FC = () => {
   const [showAiPanel, setShowAiPanel] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Prevent panel from closing when user is actively typing
   useEffect(() => {
     if (question.trim() && !showAiPanel) {
       setShowAiPanel(true);
