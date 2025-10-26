@@ -158,10 +158,6 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
       <div className="tabular-results-content">
         {activeTab === "text" ? (
           <TextResult />
-        ) : activeTab === "video" ? (
-          <div className="video-result-placeholder">
-            <VideoTab topic={promptForVideo} />
-          </div>
         ) : activeTab === "quiz" ? (
           <QuizForm
             prompt={prompt}
@@ -172,12 +168,11 @@ export default function TabularResults({ apiResponse, type = "text" }: TabularRe
         ) : null}
       </div>
       
-      {/* Render VideoTab in background when not active to keep generation running */}
-      {activeTab !== "video" && (
-        <div style={{ display: 'none' }}>
-          <VideoTab topic={promptForVideo} />
-        </div>
-      )}
+      {/* VideoTab - always rendered to keep generation running in background */}
+      {/* Hidden when not active but still mounted to continue generation */}
+      <div style={{ display: activeTab === "video" ? "block" : "none", position: activeTab === "video" ? "relative" : "absolute", left: activeTab === "video" ? "auto" : "-9999px" }}>
+        <VideoTab topic={promptForVideo} autoStart={true} />
+      </div>
     </div>
   );
 }

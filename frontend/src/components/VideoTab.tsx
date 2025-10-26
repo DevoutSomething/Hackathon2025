@@ -8,6 +8,7 @@ interface VideoResponse {
 
 interface VideoTabProps {
   topic?: string;
+  autoStart?: boolean; // Controls whether to start generation on mount
 }
 
 interface VideoState {
@@ -18,7 +19,7 @@ interface VideoState {
   timestamp?: number;
 }
 
-const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) => {
+const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts", autoStart = true }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,23 +83,25 @@ const VideoTab: React.FC<VideoTabProps> = ({ topic = "mathematical concepts" }) 
         hasGeneratedVideo.current = true;
         return;
       } else if (videoState.isGenerating) {
-        // Video is being generated in background - start checking status
-        console.log('Video was being generated in background for topic:', topic);
+        // Video is being generated in background
+        console.log('Video is being generated in background for topic:', topic);
         setIsGenerating(true);
         setIsLoading(true);
-        // Start generation process
-        generateVideo();
+        setError(null);
+        // Don't restart generation - just show loading state
         return;
       }
     }
     
-    // No video exists, start new generation immediately
-    console.log('Starting new video generation for topic:', topic);
-    hasGeneratedVideo.current = false;
-    setIsVideoReady(false);
-    setIsGenerating(false);
-    generateVideo();
-  }, [topic]);
+    // No video exists, start new generation if autoStart is enabled
+    if (autoStart) {
+      console.log('Starting new video generation for topic:', topic);
+      hasGeneratedVideo.current = false;
+      setIsVideoReady(false);
+      setIsGenerating(false);
+      generateVideo();
+    }
+  }, [topic, autoStart]);
 
   const generateVideo = async () => {
     // Prevent multiple simultaneous generations for the same topic
