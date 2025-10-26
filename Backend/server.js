@@ -1,4 +1,6 @@
 require("dotenv").config();
+
+const cors = require("cors");
 const express = require("express");
 const { Groq } = require("groq-sdk");
 const multer = require("multer");
@@ -7,6 +9,8 @@ const path = require("path");
 const { exec } = require("child_process");
 const app = express();
 const PORT = 3000;
+const mongoose = require("mongoose");
+const User = require("./models/User");
 
 // Initialize Groq
 const groq = new Groq({
@@ -404,12 +408,39 @@ app.post("/updateUserSettings", (req, res) => {
     text: "settings have been updated",
   });
 });
-
 app.post("/createVideo", async (req, res) => { 
+    const userPrompt = req.body.prompt;
+    const complexity = req.body.complexity || 2; // Default to medium complexity
+    
+    // Build complexity instructions
+    let complexityInstructions = "";
+    if (complexity === 0) {
+      complexityInstructions = "- ANIMATION COMPLEXITY: VERY SIMPLE (complexity level 0) - Use minimal objects (3-5 total), simple movements, basic shapes only";
+    } else if (complexity === 1) {
+      complexityInstructions = "- ANIMATION COMPLEXITY: SIMPLE (complexity level 1) - Use few objects (5-10 total), straightforward animations, basic transformations";
+    } else if (complexity === 2) {
+      complexityInstructions = "- ANIMATION COMPLEXITY: MEDIUM (complexity level 2) - Use moderate objects (8-15 total), standard animations with some complexity";
+    } else if (complexity === 3) {
+      complexityInstructions = "- ANIMATION COMPLEXITY: ADVANCED (complexity level 3) - Use many objects (10-20 total), complex transformations, sophisticated visuals";
+    } else {
+      complexityInstructions = "- ANIMATION COMPLEXITY: VERY ADVANCED (complexity level 4) - Use maximum objects (15-25 total), highly complex animations, intricate visual effects";
+    }
+    
     const masterPrompt = `You will be creating a manim animation in python. Respond ONLY with code - no explanations, no questions, no other text. If the animation requested is not possible, create a blank animation. For any topic, pick a simple fundamental case. Do not use ffmpeg, avconv, or any external libraries beyond manim. 
 Requirements:
-- Video duration: 20 - 30 seconds make sure you focus on the animation being as clear and intuitive as possible above all other directions besides the sntax and libraries
+${complexityInstructions}
+- Video duration: 15 - 25 seconds - SHORT and focused for faster rendering
+- Make sure the animation reflects to the source material and reflects the actual behaior of the topic
+- Minimize wait times - use 0.5-1 second waits instead of longer pauses
 - Class name: create_video (exactly this name)
+- IMPORTANT: Use 'class create_video(Scene):' for 2D animations or 'class create_video(ThreeDScene):' for 3D animations
+- For 3D animations (vectors, 3D surfaces, rotations), MUST use ThreeDScene and you CAN use set_camera_orientation() and move_camera()
+- For 2D animations, use Scene class
+- For 3D animations: Keep them SIMPLE - use FEWER objects (max 8-10 arrows/vectors), use lower resolution for complex scenes
+- For 3D vector fields: Use a sparse grid (distance 1.5 or more between vectors) to reduce rendering time
+- SPEED OPTIMIZATION: Use run_time=0.5-1 for most animations, avoid heavy computations
+- SPEED OPTIMIZATION: Use Transform instead of Create/FadeOut for faster rendering when possible
+- SPEED OPTIMIZATION: Minimize the number of objects shown at once - use FadeOut frequently
 - Include a brief introduction title (0.5-1 second)
 - Show visual graphic representations that build intuition
 - Connect all visual elements to equations/formulas when applicable
@@ -426,10 +457,14 @@ Requirements:
 - Avoid mathematical symbols that require LaTeX compilation
 - Use simple text strings instead of LaTeX expressions
 - For equations, use plain text like "x^2 + y^2 = r^2" instead of LaTeX syntax
-- DO NOT use Latex syntax DO NOT use libraries besides Manim.
+- DO NOT use Latex syntax DO NOT use libraries besides Manim
+- NEVER use axes.get_axis_labels() as it requires LaTeX - instead manually add Text labels next to axes
+- NEVER use mobject.center (it's a method, not a property) - use mobject.get_center() instead
 - IMPORTANT: Only use these safe colors: RED, BLUE, GREEN, YELLOW, WHITE, BLACK, GRAY, ORANGE, PURPLE, PINK. Do NOT use CYAN or other color constants that may not be available.
 -Make the animations concistant and easy to follow. Create graphs or visual disagrams that go along with the equations. 
 -Make these videos professional and similar to ThreeBlueOneBrown. 
+-make sure no text is overlaping with other texts or graphic
+- focus on showing the entire process of the algorithm but feel free to keep the animation clean and not cluttered.
 -NEVER have  compile_tex    
  from manim import *
 class create_video(Scene):
@@ -516,11 +551,9 @@ class create_video(Scene):
         self.play(Write(final))
         self.wait(1)
         self.play(FadeOut(final))
-Anything passed the dollar sign is the topic $`
-  try {   
-    const userPrompt = req.body.prompt;
-
-    const claudeResponse = await callClaudeAPI(masterPrompt + " " + userPrompt);
+ Anything passed the dollar sign is the topic $`
+   try {   
+     const claudeResponse = await callClaudeAPI(masterPrompt + " " + userPrompt);
 
     res.json({
       response: claudeResponse,
@@ -576,7 +609,11 @@ ${scriptContent}`;
     console.log(`Created temporary script file: ${tempFilePath}`);
     
     // Execute the Manim script - videos will be generated in the same directory as the script
-    const manimCommand = `manim -ql ${tempFilePath} create_video`;
+    // PERFORMANCE OPTIMIZATIONS (keeping full animation quality):
+    // -ql = low quality (480p, 15fps) for faster rendering
+    // --disable_caching = skip hash checking for faster startup
+    // --write_to_movie = render directly to MP4 (skip partial frame files)
+    const manimCommand = `manim -ql --disable_caching --write_to_movie ${tempFilePath} create_video`;
     console.log(`Executing command: ${manimCommand}`);
     console.log(`Script content preview:`, wrappedScript.substring(0, 300));
     
@@ -584,7 +621,7 @@ ${scriptContent}`;
     const ffmpegPath = require('ffmpeg-static');
     
     exec(manimCommand, { 
-      timeout: 60000, // 60 second timeout
+      timeout: 300000, // 300 second timeout (5 minutes) for complex 3D scenes
       cwd: scriptsDir, // Run from scripts directory
       env: { 
         ...process.env, 
@@ -592,7 +629,11 @@ ${scriptContent}`;
         // Set ffmpeg path for pydub
         FFMPEG_BINARY: ffmpegPath,
         PYDUB_FFMPEG_PATH: ffmpegPath,
-        PATH: process.env.PATH + ';' + path.dirname(ffmpegPath)
+        PATH: process.env.PATH + ';' + path.dirname(ffmpegPath),
+        // Performance optimizations
+        NUMBA_NUM_THREADS: '4', // Use 4 CPU cores for parallel processing
+        MPLBACKEND: 'Agg', // Use non-interactive backend
+        MANIM_DISABLE_CACHING: '1' // Force caching off
       }
     }, (error, stdout, stderr) => {
       console.log("Manim stdout:", stdout);
@@ -974,4 +1015,147 @@ app.post("/test-vision", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Make allowed CORS origins configurable via the ALLOWED_ORIGINS env var.
+// Format: ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+const rawAllowed = process.env.ALLOWED_ORIGINS || 'http://localhost:5173/';
+const allowedOrigins = rawAllowed.split(',').map((s) => s.trim()).filter(Boolean);
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    optionsSuccessStatus: 200,
+  })
+);
+
+
+// Mongoose setup
+
+// Prefer explicit env var, but fall back to a local dev DB if not provided
+const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/calhacks';
+
+mongoose.connect(mongoUri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  console.log('Connected to MongoDB');
+}).catch((err) => {
+  console.error('MongoDB connection error:', err.message);
+});
+
+// Mongoose connection event listeners for clearer runtime status
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB: connection established');
+});
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB error event:', err && err.message ? err.message : err);
+});
+mongoose.connection.on('disconnected', () => {
+  console.warn('MongoDB: disconnected');
+});
+
+
+app.post('/users', async (req, res) => {
+  try {
+    const { uid, email, displayName, photoURL, learningPreference, educationLevel, lastVisitedRoute } = req.body;
+    console.log('User data in the backend', req.body);
+    if (!email) return res.status(400).json({ error: 'email is required' });
+
+    // Find user by email (primary identifier)
+    let user = await User.findOne({ email });
+    if (!user) {
+      // New user: create a document with sensible defaults. pdfs and lastQuiz remain optional and empty.
+      user = new User({
+        uid: uid || null,
+        email,
+        displayName: displayName || null,
+        photoURL: photoURL || null,
+        learningPreference: learningPreference || null,
+        educationLevel: educationLevel || null,
+        lastVisitedRoute: lastVisitedRoute || '/learn'
+      });
+      await user.save();
+      return res.json({ success: true, isNew: true, user: { email: user.email, learningPreference: user.learningPreference, educationLevel: user.educationLevel, lastVisitedRoute: user.lastVisitedRoute } });
+    }
+
+    // Existing user: update metadata and preferences if provided
+    user.uid = user.uid || uid || null;
+    user.displayName = displayName || user.displayName;
+    user.photoURL = photoURL || user.photoURL;
+    if (learningPreference !== undefined) user.learningPreference = learningPreference;
+    if (educationLevel !== undefined) user.educationLevel = educationLevel;
+    if (lastVisitedRoute) user.lastVisitedRoute = lastVisitedRoute;
+    user.lastSeenAt = new Date();
+    user.updatedAt = new Date();
+    await user.save();
+
+    return res.json({ success: true, isNew: false, user: { email: user.email, learningPreference: user.learningPreference, educationLevel: user.educationLevel, lastVisitedRoute: user.lastVisitedRoute } });
+  } catch (err) {
+    console.error('Error upserting user:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fetch user by email (used by frontend Learn page)
+app.get('/users/email/:email', async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    if (!email) return res.status(400).json({ error: 'email is required' });
+
+    const user = await User.findOne({ email }).select('-pdfs.data');
+    if (!user) return res.status(404).json({ found: false });
+
+    return res.json({ found: true, user: { email: user.email, displayName: user.displayName, photoURL: user.photoURL, learningPreference: user.learningPreference, educationLevel: user.educationLevel, lastVisitedRoute: user.lastVisitedRoute } });
+  } catch (err) {
+    console.error('Error fetching user by email:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update the user's last visited route (client can call this when navigating between key app pages)
+app.post('/users/:uid/lastVisited', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { lastVisitedRoute } = req.body;
+    if (!uid || !lastVisitedRoute) return res.status(400).json({ error: 'uid and lastVisitedRoute are required' });
+
+    const user = await User.findOne({ uid });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.lastVisitedRoute = lastVisitedRoute;
+    user.lastSeenAt = new Date();
+    await user.save();
+
+    res.json({ success: true, lastVisitedRoute: user.lastVisitedRoute });
+  } catch (err) {
+    console.error('Error updating lastVisitedRoute:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upload a PDF for the user. Accepts base64 PDF in body as `pdfBase64` and `title`.
+app.post('/users/:uid/uploadPdf', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { title, filename, pdfBase64 } = req.body;
+    if (!uid || !pdfBase64 || !title) return res.status(400).json({ error: 'uid, title and pdfBase64 are required' });
+
+    const buffer = Buffer.from(pdfBase64, 'base64');
+
+    const user = await User.findOne({ uid });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.pdfs.push({ title, filename: filename || `${Date.now()}.pdf`, data: buffer, contentType: 'application/pdf' });
+    await user.save();
+
+    res.json({ success: true, pdfCount: user.pdfs.length });
+  } catch (err) {
+    console.error('Error uploading pdf:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
