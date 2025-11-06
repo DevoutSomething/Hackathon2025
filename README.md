@@ -3,9 +3,6 @@
 > Experience the future of education with AI-powered interactive learning.  
 > Visualize concepts, take quizzes, and master any subject with personalized guidance.
 
-![Learnr Landing Page](needforreadme.jpg)
-
----
 
 ## 🚀 Overview
 
